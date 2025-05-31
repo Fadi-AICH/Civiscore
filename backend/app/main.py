@@ -1,8 +1,12 @@
+# Import compatibility module first to patch Pydantic for Python 3.13+
+from app.core.compat import patch_pydantic_parameter
+
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.api.v1.endpoints import auth, countries, services, evaluations
+# Importer les routes depuis le bon emplacement
+from app.api import auth, countries, services, evaluations
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

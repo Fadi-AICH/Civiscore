@@ -1,7 +1,7 @@
 from typing import Optional, List
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from app.schemas.user import UserOut
 from app.schemas.service import ServiceOut
 
@@ -24,8 +24,7 @@ class EvaluationOut(EvaluationBase):
     service_id: int
     timestamp: datetime
     
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Evaluation with related details
@@ -33,5 +32,4 @@ class EvaluationWithDetails(EvaluationOut):
     user: UserOut
     service: ServiceOut
     
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)

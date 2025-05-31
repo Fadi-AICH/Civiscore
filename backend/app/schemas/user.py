@@ -1,7 +1,7 @@
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
 
 # Base User schema (shared properties)
@@ -20,14 +20,12 @@ class UserCreate(UserBase):
 class UserInDB(UserBase):
     id: int
     hashed_password: str
-
-    class Config:
-        orm_mode = True
+    
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Properties to return via API
 class UserOut(UserBase):
     id: int
-
-    class Config:
-        orm_mode = True
+    
+    model_config = ConfigDict(from_attributes=True)

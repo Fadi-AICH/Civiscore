@@ -3,11 +3,35 @@ from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db
-from app.crud.crud_service import get_services, get_service_by_id
-from app.schemas.service import ServiceOut, ServiceWithCountry
+from app.api.deps import get_db, get_current_user
+from app.crud.crud_service import get_services, get_service_by_id, create_service
+from app.models.user import User
+from app.schemas.service import ServiceOut, ServiceWithCountry, ServiceCreate
 
 router = APIRouter()
+
+
+@router.post("/", response_model=ServiceOut, status_code=status.HTTP_201_CREATED)
+def create_service_route(
+    service_in: ServiceCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """
+    Create a new service (requires authentication)
+    """
+    try:
+        # Create new service
+        service = create_service(db=db, service=service_in)
+        return service
+    except Exception as e:
+        # Log the error for debugging
+        print(f"Error creating service: {str(e)}")
+        # Return a generic error message to the client
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while creating the service. Please try again later."
+        )
 
 
 @router.get("/", response_model=List[ServiceOut])

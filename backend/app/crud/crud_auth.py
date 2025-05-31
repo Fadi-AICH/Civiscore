@@ -1,13 +1,10 @@
 from typing import Any, Dict, Optional, Union
 
 from sqlalchemy.orm import Session
-from passlib.context import CryptContext
 
 from app.models.user import User
 from app.schemas.user import UserCreate
-
-# Password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+from app.core.security import get_password_hash, verify_password
 
 
 def get_user_by_email(db: Session, email: str) -> Optional[User]:
@@ -22,30 +19,28 @@ def get_user_by_id(db: Session, user_id: int) -> Optional[User]:
 
 def create_user(db: Session, user: UserCreate) -> User:
     """Create a new user"""
-    # Hash the password
-    hashed_password = get_password_hash(user.password)
-    
-    # Create user object
-    db_user = User(
-        username=user.username,
-        email=user.email,
-        hashed_password=hashed_password,
-        is_active=True
-    )
-    
-    # Add to database
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    
-    return db_user
+    try:
+        # Hash the password
+        hashed_password = get_password_hash(user.password)
+        
+        # Create user object with is_active from user input or default to True
+        db_user = User(
+            username=user.username,
+            email=user.email,
+            hashed_password=hashed_password,
+            is_active=user.is_active if user.is_active is not None else True
+        )
+        
+        # Add to database
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        
+        return db_user
+    except Exception as e:
+        db.rollback()
+        # Re-raise the exception after rollback
+        raise e
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against a hash"""
-    return pwd_context.verify(plain_password, hashed_password)
-
-
-def get_password_hash(password: str) -> str:
-    """Hash a password"""
-    return pwd_context.hash(password)
+# Les fonctions verify_password et get_password_hash sont maintenant importées depuis app.core.security

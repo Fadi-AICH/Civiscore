@@ -1,6 +1,6 @@
 from typing import Optional, List
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from app.schemas.country import CountryOut
 
 
@@ -21,13 +21,11 @@ class ServiceOut(ServiceBase):
     id: int
     country_id: int
     
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Service with country details
 class ServiceWithCountry(ServiceOut):
     country: CountryOut
     
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
