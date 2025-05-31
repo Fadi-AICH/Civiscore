@@ -3,11 +3,8 @@
 import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Mic, MicOff, X, MessageSquare, Loader2, Volume2, VolumeX } from "lucide-react"
-// Add imports for the Input component
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { generateText } from "ai"
-import { openai } from "@ai-sdk/openai"
 
 interface Message {
   role: "user" | "assistant"
@@ -33,9 +30,9 @@ export default function AIAssistant() {
     if ("SpeechRecognition" in window || "webkitSpeechRecognition" in window) {
       const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition
       recognitionRef.current = new SpeechRecognition()
-      recognitionRef.current.continuous = false // Changed to false to avoid long listening periods
+      recognitionRef.current.continuous = false
       recognitionRef.current.interimResults = true
-      recognitionRef.current.lang = "en-US" // Set language explicitly
+      recognitionRef.current.lang = "en-US"
       recognitionRef.current.maxAlternatives = 1
 
       recognitionRef.current.onresult = (event: any) => {
@@ -51,8 +48,6 @@ export default function AIAssistant() {
       }
 
       recognitionRef.current.onend = () => {
-        // If we were still supposed to be listening but it ended
-        // (e.g., due to timeout but not because of an error)
         if (isListening) {
           setIsListening(false)
         }
@@ -61,9 +56,7 @@ export default function AIAssistant() {
       recognitionRef.current.onerror = (event: any) => {
         console.error("Speech recognition error", event.error)
 
-        // Handle specific error types
         if (event.error === "no-speech") {
-          // Add a message to inform the user
           setMessages((prev) => [
             ...prev,
             {
@@ -103,10 +96,9 @@ export default function AIAssistant() {
         synthRef.current.cancel()
       }
     }
-  }, [isListening]) // Added isListening as a dependency
+  }, [isListening])
 
   useEffect(() => {
-    // Scroll to bottom of messages
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
     }
@@ -155,14 +147,9 @@ export default function AIAssistant() {
     setIsLoading(true)
 
     try {
-      // Use AI SDK to generate response
-      const { text: responseText } = await generateText({
-        model: openai("gpt-4o"),
-        prompt: `You are a helpful assistant for Civiscore, a platform for rating public services globally. 
-                Respond to this user query: ${text}
-                Keep your response concise and focused on public services, governance, and civic engagement.`,
-        maxTokens: 500,
-      })
+      // Simulate AI response
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const responseText = "I understand your request. However, I'm currently in demo mode and can't process actual queries."
 
       const assistantMessage = { role: "assistant", content: responseText }
       setMessages((prev) => [...prev, assistantMessage])
