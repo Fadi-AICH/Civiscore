@@ -2,7 +2,8 @@
 import InteractiveGlobe from "@/components/InteractiveGlobe";
 import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
-import { Search, ChevronRight, Zap, GlobeIcon as Globe3, BrainCircuit, Sparkles, Menu, User, Info } from "lucide-react"
+import { Search, ChevronRight, Sparkles, Menu, User, Info } from "lucide-react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,6 +18,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 export default function Home() {
+  const router = useRouter()
   const { theme } = useTheme()
   const [hoveredCountry, setHoveredCountry] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
@@ -425,73 +427,52 @@ export default function Home() {
             and sectors.
           </p>
 
-          {/* Data Visualization Controls */}
+          {/* Data Visualization Controls - Dynamic Filter Buttons */}
           <div className="flex flex-wrap justify-center gap-2 mb-4 px-4">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={resetFilters}
-                    className="bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20"
-                  >
-                    All Countries
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Show all countries</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            {/* Main filters */}
+            {[
+              { label: "All Countries", query: "", tooltip: "Show all countries" },
+              { label: "Top Rated", query: "?sort=top", tooltip: "Show top rated countries", icon: <Sparkles className="h-4 w-4 mr-1" /> },
+              { label: "Best Healthcare", query: "?service=healthcare&sort=top", tooltip: "Show countries with best healthcare" },
+            ].map((filter, index) => (
+              <TooltipProvider key={index}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => router.push(`/explore${filter.query}`)}
+                      className="bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20"
+                    >
+                      {filter.icon}
+                      {filter.label}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{filter.tooltip}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ))}
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={showTopRatedCountries}
-                    className="bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20"
-                  >
-                    <Sparkles className="h-4 w-4 mr-1" />
-                    Top Rated
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Show top rated countries</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={showBestHealthcareCountries}
-                    className="bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20"
-                  >
-                    Best Healthcare
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Show countries with best healthcare</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
+            {/* Region filters */}
             <div className="w-full flex flex-wrap justify-center gap-2 mt-2">
-              {["Europe", "Asia", "Africa", "North America", "South America", "Oceania"].map((region) => (
+              {[
+                { label: "Europe", query: "?region=Europe" },
+                { label: "Asia", query: "?region=Asia" },
+                { label: "Africa", query: "?region=Africa" },
+                { label: "North America", query: "?region=North%20America" },
+                { label: "South America", query: "?region=South%20America" },
+                { label: "Oceania", query: "?region=Oceania" }
+              ].map((region) => (
                 <Button
-                  key={region}
+                  key={region.label}
                   variant="outline"
                   size="sm"
-                  onClick={() => filterByRegion(region)}
-                  className={`bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20 ${activeRegion === region ? "bg-blue-500/50" : ""}`}
+                  onClick={() => router.push(`/explore${region.query}`)}
+                  className="bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20"
                 >
-                  {region}
+                  {region.label}
                 </Button>
               ))}
             </div>
@@ -568,47 +549,7 @@ export default function Home() {
             </motion.div>
           )}
 
-          {/* Advanced Features */}
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-4xl px-4">
-            <Link href="/ar-explore">
-              <motion.div
-                whileHover={{ y: -5 }}
-                className="bg-gradient-to-br from-purple-500/20 to-purple-700/20 backdrop-blur-md border border-purple-500/30 rounded-xl p-4 flex flex-col items-center text-center hover:border-purple-500/50 transition-all"
-              >
-                <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center mb-3">
-                  <Globe3 className="h-6 w-6 text-purple-400" />
-                </div>
-                <h3 className="text-white font-bold mb-1">AR Explorer</h3>
-                <p className="text-gray-300 text-sm">Discover services in augmented reality</p>
-              </motion.div>
-            </Link>
 
-            <Link href="/live-data">
-              <motion.div
-                whileHover={{ y: -5 }}
-                className="bg-gradient-to-br from-blue-500/20 to-blue-700/20 backdrop-blur-md border border-blue-500/30 rounded-xl p-4 flex flex-col items-center text-center hover:border-blue-500/50 transition-all"
-              >
-                <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center mb-3">
-                  <Zap className="h-6 w-6 text-blue-400" />
-                </div>
-                <h3 className="text-white font-bold mb-1">Live Heatmap</h3>
-                <p className="text-gray-300 text-sm">Real-time global service activity</p>
-              </motion.div>
-            </Link>
-
-            <Link href="/holographic">
-              <motion.div
-                whileHover={{ y: -5 }}
-                className="bg-gradient-to-br from-cyan-500/20 to-cyan-700/20 backdrop-blur-md border border-cyan-500/30 rounded-xl p-4 flex flex-col items-center text-center hover:border-cyan-500/50 transition-all"
-              >
-                <div className="w-12 h-12 rounded-full bg-cyan-500/20 flex items-center justify-center mb-3">
-                  <BrainCircuit className="h-6 w-6 text-cyan-400" />
-                </div>
-                <h3 className="text-white font-bold mb-1">Holographic View</h3>
-                <p className="text-gray-300 text-sm">3D comparison of global services</p>
-              </motion.div>
-            </Link>
-          </div>
         </motion.div>
 
         {/* Stats Section */}
@@ -647,20 +588,7 @@ export default function Home() {
           </Card>
         </motion.div>
 
-        {/* Footer with instructions */}
-        <div className="w-full text-center mt-4 mb-2">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 1 }}
-            className="px-6 py-3 bg-blue-500/20 backdrop-blur-md border border-blue-500/30 rounded-lg inline-block"
-          >
-            <p className="text-white flex items-center gap-2">
-              <Info className="h-4 w-4" />
-              Click on any country bubble to view detailed information
-            </p>
-          </motion.div>
-        </div>
+
       </div>
 
       {/* Fixed bottom navigation bar for mobile */}
@@ -668,7 +596,7 @@ export default function Home() {
         <div className="flex justify-around py-3">
           <Link href="/">
             <Button variant="ghost" size="sm" className="text-white flex flex-col items-center">
-              <Globe3 className="h-5 w-5 mb-1" />
+              <Search className="h-5 w-5 mb-1" />
               <span className="text-xs">Home</span>
             </Button>
           </Link>
@@ -680,7 +608,7 @@ export default function Home() {
           </Link>
           <Link href="/about">
             <Button variant="ghost" size="sm" className="text-white flex flex-col items-center">
-              <BrainCircuit className="h-5 w-5 mb-1" />
+              <Info className="h-5 w-5 mb-1" />
               <span className="text-xs">About</span>
             </Button>
           </Link>
