@@ -16,6 +16,13 @@ class ServiceCreate(ServiceBase):
     country_id: int
 
 
+# Properties to receive via API on update
+class ServiceUpdate(BaseModel):
+    name: Optional[str] = None
+    category: Optional[str] = None
+    country_id: Optional[int] = None
+
+
 # Properties to return via API
 class ServiceOut(ServiceBase):
     id: int

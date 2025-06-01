@@ -8,7 +8,7 @@ class Service(Base):
     __tablename__ = "services"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(200), index=True)
+    name = Column(String(191), index=True)  # Limité à 191 pour MySQL utf8mb4
     category = Column(String(100), index=True)
     country_id = Column(Integer, ForeignKey("countries.id"))
     rating = Column(Float, default=0.0)

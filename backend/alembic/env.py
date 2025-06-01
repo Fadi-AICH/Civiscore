@@ -12,7 +12,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 # Import the SQLAlchemy declarative Base and models
 from app.database import Base
-from app.models import user, country, service, evaluation  # Import all models
+# Import all models
+from app.models import user, country, service, evaluation
+from app.models import evaluation_report, evaluation_vote, evaluation_criteria
 from app.core.config import settings
 
 # this is the Alembic Config object, which provides

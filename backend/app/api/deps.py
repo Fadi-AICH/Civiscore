@@ -7,7 +7,7 @@ from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal, get_db
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.core import security
 from app.core.config import settings
 from app.crud.crud_auth import get_user_by_id
@@ -44,3 +44,17 @@ def get_current_user(
         )
     
     return user
+
+
+def get_current_admin_user(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """
+    Validate that the current user is an admin
+    """
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The user doesn't have enough privileges"
+        )
+    return current_user
