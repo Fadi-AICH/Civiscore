@@ -1,9 +1,10 @@
 from typing import Any, Dict, Optional, Union, Tuple, List
+from uuid import UUID
 
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas.user import UserCreate, UserUpdate
 from app.core.security import get_password_hash, verify_password
 
@@ -13,7 +14,7 @@ def get_user_by_email(db: Session, email: str) -> Optional[User]:
     return db.query(User).filter(User.email == email).first()
 
 
-def get_user_by_id(db: Session, user_id: int) -> Optional[User]:
+def get_user_by_id(db: Session, user_id: UUID) -> Optional[User]:
     """Get a user by ID"""
     return db.query(User).filter(User.id == user_id).first()
 
@@ -75,9 +76,10 @@ def create_user(db: Session, user: UserCreate) -> User:
         db_user = User(
             username=user.username,
             email=user.email,
+            full_name=user.full_name,
             hashed_password=hashed_password,
             is_active=user.is_active if user.is_active is not None else True,
-            role=user.role if user.role is not None else "user"
+            role=UserRole(user.role.value) if user.role is not None else UserRole.user
         )
         
         # Add to database
@@ -92,7 +94,9 @@ def create_user(db: Session, user: UserCreate) -> User:
         raise e
 
 
-def update_user(db: Session, *, user_id: int, user_in: UserUpdate) -> Optional[User]:
+def update_user(
+    db: Session, *, user_id: UUID, user_in: UserUpdate
+) -> Optional[User]:
     """Update user information"""
     try:
         db_user = get_user_by_id(db, user_id)
@@ -122,7 +126,7 @@ def update_user(db: Session, *, user_id: int, user_in: UserUpdate) -> Optional[U
         raise e
 
 
-def delete_user(db: Session, user_id: int) -> Tuple[bool, str]:
+def delete_user(db: Session, user_id: UUID) -> Tuple[bool, str]:
     """Delete a user"""
     try:
         user = get_user_by_id(db, user_id)

@@ -24,37 +24,36 @@ def create_user_route(
     """
     Create new user
     """
+    # Check if user already exists
+    user = get_user_by_email(db, email=user_in.email)
+    if user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
+    
+    # Check if username already exists
+    existing_username = db.query(User).filter(User.username == user_in.username).first()
+    if existing_username:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already taken"
+        )
+    
+    # Create new user - Pas de try/except pour voir les vraies erreurs
+    # Affichage du contenu de user_in pour le débogage
+    import traceback
+    print(f"\n\nTentative de création d'utilisateur avec: {user_in.dict()}\n\n")
+    
     try:
-        # Check if user already exists
-        user = get_user_by_email(db, email=user_in.email)
-        if user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered"
-            )
-        
-        # Check if username already exists
-        existing_username = db.query(User).filter(User.username == user_in.username).first()
-        if existing_username:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Username already taken"
-            )
-        
-        # Create new user
         user = create_user(db, user=user_in)
         return user
-    except HTTPException:
-        # Re-raise HTTP exceptions as they are already properly formatted
-        raise
     except Exception as e:
-        # Log the error for debugging
-        print(f"Error creating user: {str(e)}")
-        # Return a generic error message to the client
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while creating the user. Please try again later."
-        )
+        # Afficher l'erreur complète avec traceback
+        print(f"\n\nERREUR LORS DE LA CRÉATION D'UTILISATEUR:\n{str(e)}\n")
+        traceback.print_exc()
+        # Relancer l'exception brute pour voir l'erreur réelle
+        raise
 
 
 @router.post("/login", response_model=Token)

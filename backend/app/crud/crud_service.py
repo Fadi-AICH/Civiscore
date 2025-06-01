@@ -1,4 +1,5 @@
 from typing import Any, Dict, Optional, Union, List, Tuple
+from uuid import UUID
 
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import asc, desc, func
@@ -8,81 +9,14 @@ from app.models.service import Service
 from app.schemas.service import ServiceCreate, ServiceUpdate
 
 
-def get_services(
-    db: Session, 
-    page: int = 1,
-    limit: int = 10,
-    keyword: Optional[str] = None,
-    country_id: Optional[int] = None,
-    category: Optional[str] = None,
-    min_rating: Optional[float] = None,
-    sort_by: str = "id",
-    order: str = "asc",
-    include_country: bool = False
-) -> Tuple[List[Service], int]:
-    """Get all services with optional filtering, sorting and pagination
-    
-    Args:
-        db: Database session
-        page: Page number (1-indexed)
-        limit: Number of items per page
-        keyword: Search term for service name
-        country_id: Filter by country ID
-        category: Filter by service category
-        min_rating: Filter by minimum rating
-        sort_by: Field to sort by (id, name, category, rating)
-        order: Sort order (asc or desc)
-        include_country: Whether to include country details
-        
-    Returns:
-        Tuple of (list of services, total count)
-    """
-    # Calculate offset from page and limit
-    offset = (page - 1) * limit
-    
-    # Start with base query
+def get_services(db: Session, skip: int = 0, limit: int = 100, include_country: bool = False):
+    query = db.query(Service)
     if include_country:
-        query = db.query(Service).options(joinedload(Service.country))
-    else:
-        query = db.query(Service)
-    
-    # Apply filters
-    if keyword:
-        search_term = f"%{keyword}%"
-        query = query.filter(Service.name.ilike(search_term))
-    
-    if country_id is not None:
-        query = query.filter(Service.country_id == country_id)
-    
-    if category:
-        query = query.filter(Service.category == category)
-    
-    if min_rating is not None:
-        query = query.filter(Service.rating >= min_rating)
-    
-    # Get total count before pagination
-    total = query.count()
-    
-    # Apply sorting
-    if sort_by:
-        # Ensure sort_by is a valid column
-        valid_columns = ["id", "name", "category", "rating"]
-        if sort_by not in valid_columns:
-            sort_by = "id"  # Default to id if invalid column
-            
-        sort_column = getattr(Service, sort_by)
-        if order.lower() == "desc":
-            query = query.order_by(desc(sort_column))
-        else:
-            query = query.order_by(asc(sort_column))
-    
-    # Apply pagination
-    query = query.offset(offset).limit(limit)
-    
-    return query.all(), total
+        query = query.join(Service.country).options(joinedload(Service.country))
+    return query.offset(skip).limit(limit).all()
 
 
-def get_service_by_id(db: Session, service_id: int, include_country: bool = False) -> Optional[Service]:
+def get_service_by_id(db: Session, service_id: UUID, include_country: bool = False) -> Optional[Service]:
     """Get a service by ID with optional country details"""
     query = db.query(Service)
     
@@ -108,7 +42,7 @@ def create_service(db: Session, service: ServiceCreate) -> Service:
     return db_service
 
 
-def update_service_rating(db: Session, service_id: int, new_rating: float) -> Optional[Service]:
+def update_service_rating(db: Session, service_id: UUID, new_rating: float) -> Optional[Service]:
     """Update a service's rating"""
     db_service = get_service_by_id(db, service_id)
     if not db_service:
@@ -121,7 +55,7 @@ def update_service_rating(db: Session, service_id: int, new_rating: float) -> Op
     return db_service
 
 
-def update_service(db: Session, service_id: int, service_update: ServiceUpdate) -> Optional[Service]:
+def update_service(db: Session, service_id: UUID, service_update: ServiceUpdate) -> Optional[Service]:
     """Update a service's details"""
     db_service = get_service_by_id(db, service_id)
     if not db_service:
@@ -144,8 +78,9 @@ def update_service(db: Session, service_id: int, service_update: ServiceUpdate) 
         raise e
 
 
-def delete_service(db: Session, service_id: int) -> bool:
-    """Delete a service by ID
+def delete_service(db: Session, service_id: UUID) -> bool:
+    """
+    Delete a service by ID
     
     Args:
         db: Database session
@@ -154,14 +89,28 @@ def delete_service(db: Session, service_id: int) -> bool:
     Returns:
         bool: True if service was deleted, False if service was not found
     """
-    db_service = get_service_by_id(db, service_id)
-    if not db_service:
+    service = db.query(Service).filter(Service.id == service_id).first()
+    if not service:
         return False
     
-    try:
-        db.delete(db_service)
-        db.commit()
-        return True
-    except Exception as e:
-        db.rollback()
-        raise e
+    db.delete(service)
+    db.commit()
+    return True
+
+
+def get_service_by_name_and_address(db: Session, name: str, address: str) -> Optional[Service]:
+    """
+    Get a service by name and address to avoid duplicates
+    
+    Args:
+        db: Database session
+        name: Name of the service
+        address: Address of the service
+        
+    Returns:
+        Service object if found, None otherwise
+    """
+    return db.query(Service).filter(
+        Service.name == name,
+        Service.address == address
+    ).first()

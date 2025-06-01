@@ -1,7 +1,9 @@
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from enum import Enum
+from uuid import UUID
 from pydantic import BaseModel, Field, ConfigDict
+from app.schemas.utils import UUIDType
 
 from app.models.evaluation import EvaluationStatus
 from app.models.evaluation_report import ReportReason
@@ -22,8 +24,8 @@ class EvaluationBase(BaseModel):
 
 
 # Properties to receive via API on creation
-class EvaluationCreate(EvaluationBase):
-    service_id: int
+class EvaluationCreate(EvaluationBase, UUIDType):
+    service_id: UUID
 
 
 # Properties to receive via API on update
@@ -33,10 +35,10 @@ class EvaluationUpdate(BaseModel):
 
 
 # Properties to return via API
-class EvaluationOut(EvaluationBase):
-    id: int
-    user_id: int
-    service_id: int
+class EvaluationOut(EvaluationBase, UUIDType):
+    id: UUID
+    user_id: UUID
+    service_id: UUID
     timestamp: datetime
     status: EvaluationStatus = EvaluationStatus.PENDING
     
@@ -64,16 +66,16 @@ class EvaluationReportBase(BaseModel):
     description: Optional[str] = None
 
 
-class EvaluationReportCreate(EvaluationReportBase):
-    evaluation_id: int
+class EvaluationReportCreate(EvaluationReportBase, UUIDType):
+    evaluation_id: UUID
 
 
-class EvaluationReportOut(EvaluationReportBase):
-    id: int
-    evaluation_id: int
-    reporter_id: int
+class EvaluationReportOut(EvaluationReportBase, UUIDType):
+    id: UUID
+    evaluation_id: UUID
+    reporter_id: UUID
     timestamp: datetime
-    resolved: int = 0
+    resolved: bool = False
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -94,14 +96,14 @@ class EvaluationVoteBase(BaseModel):
     is_helpful: bool
 
 
-class EvaluationVoteCreate(EvaluationVoteBase):
-    evaluation_id: int
+class EvaluationVoteCreate(EvaluationVoteBase, UUIDType):
+    evaluation_id: UUID
 
 
-class EvaluationVoteOut(EvaluationVoteBase):
-    id: int
-    evaluation_id: int
-    voter_id: int
+class EvaluationVoteOut(EvaluationVoteBase, UUIDType):
+    id: UUID
+    evaluation_id: UUID
+    voter_id: UUID
     timestamp: datetime
     
     model_config = ConfigDict(from_attributes=True)
@@ -119,14 +121,22 @@ class EvaluationCriteriaCreate(EvaluationCriteriaBase):
     pass
 
 
-class EvaluationCriteriaOut(EvaluationCriteriaBase):
-    id: int
+class EvaluationCriteriaOut(EvaluationCriteriaBase, UUIDType):
+    id: UUID
     
     model_config = ConfigDict(from_attributes=True)
 
 
-class EvaluationCriteriaScoreBase(BaseModel):
-    criteria_id: int
+# Properties to receive via API on update
+class EvaluationCriteriaUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    weight: Optional[float] = None
+
+
+class EvaluationCriteriaScoreBase(BaseModel, UUIDType):
+    criteria_id: UUID
     score: float = Field(..., ge=0, le=10)
 
 
@@ -134,9 +144,9 @@ class EvaluationCriteriaScoreCreate(EvaluationCriteriaScoreBase):
     pass
 
 
-class EvaluationCriteriaScoreOut(EvaluationCriteriaScoreBase):
-    id: int
-    evaluation_id: int
+class EvaluationCriteriaScoreOut(EvaluationCriteriaScoreBase, UUIDType):
+    id: UUID
+    evaluation_id: UUID
     
     model_config = ConfigDict(from_attributes=True)
 

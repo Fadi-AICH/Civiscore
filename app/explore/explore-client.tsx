@@ -12,31 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { COUNTRIES_DATA, COUNTRIES_BY_REGION } from "@/lib/countries-data"
-
-// Generate services data from countries data
-const generateServicesData = () => {
-  const serviceTypes = ["Healthcare", "Education", "Transportation", "Utilities", "Government"]
-  const services = []
-
-  for (const country of COUNTRIES_DATA) {
-    for (const serviceType of serviceTypes) {
-      const serviceKey = serviceType.toLowerCase() as keyof typeof country.services
-      if (country.services && country.services[serviceKey]) {
-        services.push({
-          id: `${country.code}-${serviceKey}`,
-          name: `${serviceType} System`,
-          category: serviceType,
-          country: country.name,
-          rating: country.services[serviceKey],
-          reviews: Math.floor(Math.random() * 3000) + 500,
-          image: `/placeholder.svg?height=200&width=400&text=${country.name}+${serviceType}`,
-        })
-      }
-    }
-  }
-
-  return services
-}
+import { useServices } from "@/hooks/useServices"
 
 export default function ExploreClient() {
   const searchParams = useSearchParams()
@@ -45,18 +21,16 @@ export default function ExploreClient() {
   const [selectedRegion, setSelectedRegion] = useState("All")
   const [isDarkMode, setIsDarkMode] = useState(true)
   const [viewMode, setViewMode] = useState<"grid" | "map">("grid")
-  const [services, setServices] = useState<any[]>([])
+
+  const apiFilters = {
+    category: selectedCategory !== "All" ? selectedCategory : undefined,
+    include_country: true
+  }
+
+  const { services, isLoading, error } = useServices(apiFilters)
   const [filteredServices, setFilteredServices] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
 
-  // Initialize services data
   useEffect(() => {
-    const servicesData = generateServicesData()
-    setServices(servicesData)
-    setFilteredServices(servicesData)
-    setIsLoading(false)
-
-    // Check for URL parameters
     const serviceParam = searchParams.get("service")
     const regionParam = searchParams.get("region")
 
@@ -69,46 +43,38 @@ export default function ExploreClient() {
     }
   }, [searchParams])
 
-  // Filter services based on search, category, and region
   useEffect(() => {
-    if (services.length === 0) return
+    if (!services || services.length === 0) return
 
     let filtered = [...services]
 
-    // Apply search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter(
         (service) =>
           service.name.toLowerCase().includes(query) ||
-          service.country.toLowerCase().includes(query) ||
-          service.category.toLowerCase().includes(query),
+          (service.country?.name && service.country.name.toLowerCase().includes(query)) ||
+          (service.category && service.category.toLowerCase().includes(query)),
       )
     }
 
-    // Apply category filter
-    if (selectedCategory !== "All") {
-      filtered = filtered.filter((service) => service.category === selectedCategory)
-    }
-
-    // Apply region filter
     if (selectedRegion !== "All") {
       const countriesInRegion = COUNTRIES_BY_REGION[selectedRegion]?.map((c) => c.name) || []
-      filtered = filtered.filter((service) => countriesInRegion.includes(service.country))
+      filtered = filtered.filter((service) => 
+        service.country && countriesInRegion.includes(service.country.name)
+      )
     }
 
-    // Sort by rating (highest first)
-    filtered.sort((a, b) => b.rating - a.rating)
+    filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0))
 
     setFilteredServices(filtered)
-  }, [searchQuery, selectedCategory, selectedRegion, services])
+  }, [searchQuery, selectedRegion, services])
 
   const categories = ["All", "Healthcare", "Education", "Transportation", "Utilities", "Government"]
   const regions = ["All", "Africa", "Asia", "Europe", "North America", "South America", "Oceania"]
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white">
-      {/* Header */}
       <motion.div
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -160,7 +126,6 @@ export default function ExploreClient() {
         </div>
       </motion.div>
 
-      {/* Search and Filter Section */}
       <div className="container mx-auto px-4 py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -232,7 +197,6 @@ export default function ExploreClient() {
           </div>
         </motion.div>
 
-        {/* Category Tabs (visible on larger screens) */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -254,72 +218,59 @@ export default function ExploreClient() {
           </Tabs>
         </motion.div>
 
-        {/* Loading State */}
         {isLoading ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
           </div>
         ) : (
           <>
-            {/* Results Count */}
             <div className="mb-6 text-gray-300">
               Showing {filteredServices.length} results
               {selectedCategory !== "All" && ` for ${selectedCategory}`}
               {selectedRegion !== "All" && ` in ${selectedRegion}`}
             </div>
 
-            {/* Services Grid */}
             {viewMode === "grid" && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {filteredServices.map((service) => (
-                  <motion.div
-                    key={service.id}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.5 }}
-                    whileHover={{ y: -5, transition: { duration: 0.2 } }}
-                    className="h-full"
-                  >
-                    <Link href={`/service/${service.id}`}>
-                      <Card className="h-full overflow-hidden bg-black/30 backdrop-blur-md border border-white/10 hover:border-blue-500/50 transition-all duration-300">
-                        <div className="relative h-48 overflow-hidden">
-                          <img
-                            src={service.image || "/placeholder.svg"}
-                            alt={service.name}
-                            className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-                          />
-                          <div className="absolute top-2 right-2">
-                            <Badge className="bg-blue-500 text-white">{service.category}</Badge>
-                          </div>
+                  <Link key={service.id} href={`/service/${service.id}`}>
+                    <Card className="bg-black/30 backdrop-blur-md border border-white/10 hover:border-blue-400 transition-all hover:shadow-lg hover:shadow-blue-500/20">
+                      <div className="relative h-32 rounded-t-lg overflow-hidden">
+                        <div className="w-full h-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center">
+                          <span className="text-3xl text-white/30">{service.category?.charAt(0) || '?'}</span>
                         </div>
-                        <CardContent className="p-4">
-                          <div className="flex justify-between items-start mb-2">
-                            <h3 className="text-lg font-bold">{service.name}</h3>
-                            <div className="flex items-center gap-1">
-                              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                              <span className="text-sm font-medium">{service.rating.toFixed(1)}</span>
-                            </div>
+                        <Badge className="absolute top-2 right-2 bg-blue-500 text-white">{service.category}</Badge>
+                      </div>
+                      <CardContent className="p-4">
+                        <h3 className="text-lg font-bold truncate">{service.name}</h3>
+                        <p className="text-sm text-gray-400">{service.country?.name || 'Unknown'}</p>
+                        <div className="flex items-center mt-2">
+                          <div className="flex">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`h-4 w-4 ${
+                                  star <= Math.round(service.rating || 0) ? "fill-yellow-400 text-yellow-400" : "text-gray-500"
+                                }`}
+                              />
+                            ))}
                           </div>
-                          <p className="text-sm text-gray-300">{service.country}</p>
-                        </CardContent>
-                        <CardFooter className="p-4 pt-0 flex justify-between items-center">
-                          <span className="text-xs text-gray-400">{service.reviews} reviews</span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 p-0"
-                          >
-                            View Details
-                          </Button>
-                        </CardFooter>
-                      </Card>
-                    </Link>
-                  </motion.div>
+                          <span className="text-xs ml-2 text-gray-400">
+                            {(service.rating || 0).toFixed(1)} ({service.evaluations?.length || 0} reviews)
+                          </span>
+                        </div>
+                      </CardContent>
+                      <CardFooter className="p-4 pt-0 flex justify-end">
+                        <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-300">
+                          View Details
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  </Link>
                 ))}
               </div>
             )}
 
-            {/* Map View */}
             {viewMode === "map" && (
               <div className="bg-black/30 backdrop-blur-md border border-white/10 rounded-xl p-6 h-[600px] relative">
                 <div className="absolute inset-0 flex items-center justify-center">

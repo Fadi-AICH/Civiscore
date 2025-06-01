@@ -1,4 +1,5 @@
 from typing import Any, List, Optional
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.exc import IntegrityError
@@ -64,7 +65,7 @@ def read_countries(
 
 @router.get("/{country_id}", response_model=CountryOut)
 def read_country(
-    country_id: int,
+    country_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
@@ -117,7 +118,7 @@ def update_country_route(
     *,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    country_id: int,
+    country_id: UUID,
     country_in: CountryUpdate
 ) -> Any:
     """
@@ -164,7 +165,7 @@ def delete_country_route(
     *,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    country_id: int
+    country_id: UUID
 ) -> None:
     """
     Delete a country

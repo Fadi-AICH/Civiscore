@@ -1,5 +1,6 @@
 from typing import Any, List, Optional, Dict
 from datetime import datetime
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Path, Response
 from sqlalchemy.orm import Session
@@ -131,8 +132,8 @@ def read_evaluations(
     db: Session = Depends(get_db),
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(10, ge=1, le=100, description="Items per page"),
-    service_id: Optional[int] = Query(None, description="Filter by service ID"),
-    user_id: Optional[int] = Query(None, description="Filter by user ID"),
+    service_id: Optional[UUID] = Query(None, description="Filter by service ID"),
+    user_id: Optional[UUID] = Query(None, description="Filter by user ID"),
     min_score: Optional[float] = Query(None, ge=0, le=10, description="Minimum score"),
     max_score: Optional[float] = Query(None, ge=0, le=10, description="Maximum score"),
     search: Optional[str] = Query(None, description="Search in comments"),
@@ -175,7 +176,7 @@ def read_evaluations(
 
 @router.get("/{service_id}/list", response_model=List[EvaluationWithDetails])
 def read_evaluations_by_service(
-    service_id: int = Path(..., description="The ID of the service to get evaluations for"),
+    service_id: UUID = Path(..., description="The ID of the service to get evaluations for"),
     db: Session = Depends(get_db),
     skip: int = Query(0, ge=0, description="Skip N items"),
     limit: int = Query(100, ge=1, le=100, description="Limit to N items"),
@@ -207,7 +208,7 @@ def read_evaluations_by_service(
 
 @router.get("/{evaluation_id}", response_model=EvaluationWithDetails)
 def read_evaluation(
-    evaluation_id: int = Path(..., description="The ID of the evaluation to get"),
+    evaluation_id: UUID = Path(..., description="The ID of the evaluation to get"),
     db: Session = Depends(get_db)
 ) -> Any:
     """
@@ -224,7 +225,7 @@ def read_evaluation(
 
 @router.get("/{evaluation_id}/criteria", response_model=List[EvaluationCriteriaScoreOut])
 def read_evaluation_criteria(
-    evaluation_id: int = Path(..., description="The ID of the evaluation to get criteria for"),
+    evaluation_id: UUID = Path(..., description="The ID of the evaluation to get criteria for"),
     db: Session = Depends(get_db)
 ) -> Any:
     """
@@ -243,7 +244,7 @@ def read_evaluation_criteria(
 
 @router.put("/{evaluation_id}", response_model=EvaluationOut)
 def update_evaluation_route(
-    evaluation_id: int = Path(..., description="The ID of the evaluation to update"),
+    evaluation_id: UUID = Path(..., description="The ID of the evaluation to update"),
     evaluation_update: EvaluationUpdate = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -277,7 +278,7 @@ def update_evaluation_route(
 
 @router.delete("/{evaluation_id}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
 def delete_evaluation_route(
-    evaluation_id: int = Path(..., description="The ID of the evaluation to delete"),
+    evaluation_id: UUID = Path(..., description="The ID of the evaluation to delete"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -326,7 +327,7 @@ def read_user_evaluations(
 
 @router.get("/stats/service/{service_id}", response_model=EvaluationStats)
 def get_service_evaluation_stats(
-    service_id: int = Path(..., description="The ID of the service to get stats for"),
+    service_id: UUID = Path(..., description="The ID of the service to get stats for"),
     db: Session = Depends(get_db)
 ) -> Any:
     """

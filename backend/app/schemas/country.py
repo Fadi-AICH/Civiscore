@@ -1,6 +1,8 @@
 from typing import Optional, List
+from uuid import UUID
 
 from pydantic import BaseModel, Field, ConfigDict
+from app.schemas.utils import UUIDType
 
 
 # Base Country schema (shared properties)
@@ -20,8 +22,8 @@ class CountryUpdate(BaseModel):
 
 
 # Properties to return via API
-class CountryOut(CountryBase):
-    id: int
+class CountryOut(CountryBase, UUIDType):
+    id: UUID
 
     model_config = ConfigDict(from_attributes=True)
 

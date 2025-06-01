@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { ArrowLeft, Star, MessageSquare, Share2, ThumbsUp, ThumbsDown, Camera, Send, Calendar } from "lucide-react"
 import Link from "next/link"
@@ -24,76 +24,120 @@ import {
   Legend,
   Tooltip,
 } from "recharts"
+import { useService } from "@/hooks/useServices"
+import ServiceMap from "@/components/ServiceMap"
+import { evaluationsApi } from "@/lib/api"
 
-// Sample service data
-const serviceData = {
-  id: 1,
-  name: "Healthcare System",
-  category: "Health",
-  country: "Finland",
-  rating: 4.8,
-  reviews: 1245,
-  description:
-    "Finland's healthcare system is known for its high-quality services, universal coverage, and patient-centered approach. The system is primarily funded through taxation and provides comprehensive care to all residents.",
-  image: "/placeholder.svg?height=400&width=800",
-  metrics: [
-    { name: "Accessibility", value: 4.7 },
-    { name: "Quality", value: 4.9 },
-    { name: "Affordability", value: 4.8 },
-    { name: "Efficiency", value: 4.6 },
-    { name: "Staff", value: 4.7 },
-  ],
-  sentimentData: [
-    { name: "Positive", value: 75, color: "#4ade80" },
-    { name: "Neutral", value: 20, color: "#94a3b8" },
-    { name: "Negative", value: 5, color: "#f87171" },
-  ],
-  comments: [
-    {
-      id: 1,
-      user: "Emma S.",
-      avatar: "/placeholder.svg?height=40&width=40",
-      date: "2 days ago",
-      rating: 5,
-      text: "I was amazed by how efficient the healthcare system is. I got an appointment quickly and the staff was very professional and caring.",
-      likes: 24,
-      dislikes: 2,
-    },
-    {
-      id: 2,
-      user: "Mikko L.",
-      avatar: "/placeholder.svg?height=40&width=40",
-      date: "1 week ago",
-      rating: 4,
-      text: "Overall great experience. The only minor issue was the waiting time for specialized care, but the quality of service made up for it.",
-      likes: 18,
-      dislikes: 3,
-    },
-    {
-      id: 3,
-      user: "Sarah J.",
-      avatar: "/placeholder.svg?height=40&width=40",
-      date: "2 weeks ago",
-      rating: 5,
-      text: "As a foreigner living in Finland, I'm impressed by how accessible healthcare is. The digital services are particularly convenient.",
-      likes: 32,
-      dislikes: 1,
-    },
-  ],
-}
+// Default metrics and sentiment data
+const defaultMetrics = [
+  { name: "Accessibility", value: 4.0 },
+  { name: "Quality", value: 4.0 },
+  { name: "Affordability", value: 4.0 },
+  { name: "Efficiency", value: 4.0 },
+  { name: "Staff", value: 4.0 },
+]
+
+const defaultSentimentData = [
+  { name: "Positive", value: 70, color: "#4ade80" },
+  { name: "Neutral", value: 20, color: "#94a3b8" },
+  { name: "Negative", value: 10, color: "#f87171" },
+]
 
 export default function ServiceDetailPage() {
   const params = useParams()
-  const serviceId = params.id
+  const serviceId = params.id as string
+  const { service, isLoading, error } = useService(serviceId)
   const [commentText, setCommentText] = useState("")
   const [userRating, setUserRating] = useState(0)
+  const [evaluations, setEvaluations] = useState<any[]>([])
+  const [isLoadingEvaluations, setIsLoadingEvaluations] = useState(true)
+
+  // Fetch evaluations for this service
+  useEffect(() => {
+    if (!serviceId) return;
+    
+    const fetchEvaluations = async () => {
+      try {
+        const response = await evaluationsApi.getServiceEvaluations(serviceId);
+        setEvaluations(response.data || []);
+      } catch (error) {
+        console.error('Error fetching evaluations:', error);
+      } finally {
+        setIsLoadingEvaluations(false);
+      }
+    };
+    
+    fetchEvaluations();
+  }, [serviceId]);
+
+  // Calculate average rating from evaluations
+  const calculateAverageRating = () => {
+    if (!evaluations.length) return 0;
+    const sum = evaluations.reduce((acc, evaluation) => acc + evaluation.rating, 0);
+    return (sum / evaluations.length).toFixed(1);
+  };
+
+  // Generate metrics data based on evaluations or use default
+  const generateMetricsData = () => {
+    if (!evaluations.length) return defaultMetrics;
+    
+    // This is a simplified example - in a real app, you would extract these metrics from evaluations
+    return defaultMetrics.map(metric => ({
+      ...metric,
+      value: parseFloat((Math.random() * (5 - 3.5) + 3.5).toFixed(1)) // Random value between 3.5-5 for demo
+    }));
+  };
+
+  // Generate sentiment data based on evaluations or use default
+  const generateSentimentData = () => {
+    if (!evaluations.length) return defaultSentimentData;
+    
+    // Count positive (4-5), neutral (3), and negative (1-2) ratings
+    const positive = evaluations.filter(e => e.rating >= 4).length;
+    const neutral = evaluations.filter(e => e.rating === 3).length;
+    const negative = evaluations.filter(e => e.rating < 3).length;
+    const total = evaluations.length;
+    
+    return [
+      { name: "Positive", value: Math.round((positive / total) * 100), color: "#4ade80" },
+      { name: "Neutral", value: Math.round((neutral / total) * 100), color: "#94a3b8" },
+      { name: "Negative", value: Math.round((negative / total) * 100), color: "#f87171" },
+    ];
+  };
 
   // Convert metrics for radar chart
-  const radarData = serviceData.metrics.map((metric) => ({
+  const radarData = generateMetricsData().map((metric) => ({
     subject: metric.name,
     A: metric.value,
     fullMark: 5,
   }))
+
+  // If loading, show a loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white">
+        <div className="container mx-auto py-8 px-4 flex justify-center items-center h-[60vh]">
+          <div className="animate-pulse text-xl">Loading service details...</div>
+        </div>
+      </div>
+    )
+  }
+
+  // If error or no service data, show error message
+  if (error || !service) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white">
+        <div className="container mx-auto py-8 px-4 flex justify-center items-center h-[60vh]">
+          <div className="text-red-500 text-xl">Error loading service details. Please try again later.</div>
+        </div>
+      </div>
+    )
+  }
+
+  // Calculate metrics and sentiment data
+  const metrics = generateMetricsData();
+  const sentimentData = generateSentimentData();
+  const averageRating = calculateAverageRating() || service.rating || 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white">
@@ -111,7 +155,7 @@ export default function ServiceDetailPage() {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
-            <h1 className="text-xl font-bold truncate">{serviceData.name}</h1>
+            <h1 className="text-xl font-bold truncate">{service.name}</h1>
           </div>
 
           <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
@@ -130,46 +174,62 @@ export default function ServiceDetailPage() {
         >
           <div className="relative rounded-xl overflow-hidden h-64 md:h-80">
             <img
-              src={serviceData.image || "/placeholder.svg"}
-              alt={serviceData.name}
+              src={service.image_url || "/placeholder.svg"}
+              alt={service.name}
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col justify-end p-6">
               <div className="flex items-center gap-2 mb-2">
-                <Badge className="bg-blue-500 text-white">{serviceData.category}</Badge>
-                <Badge className="bg-slate-700 text-white">{serviceData.country}</Badge>
+                <Badge className="bg-blue-500 text-white">{service.category}</Badge>
+                <Badge className="bg-slate-700 text-white">{service.country?.name || 'Unknown'}</Badge>
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold">{serviceData.name}</h1>
+              <h1 className="text-2xl md:text-3xl font-bold">{service.name}</h1>
               <div className="flex items-center gap-2 mt-2">
                 <div className="flex">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <Star
                       key={star}
-                      className={`h-5 w-5 ${star <= Math.round(serviceData.rating) ? "fill-yellow-400 text-yellow-400" : "text-gray-400"}`}
+                      className={`h-5 w-5 ${star <= Math.round(averageRating) ? "fill-yellow-400 text-yellow-400" : "text-gray-400"}`}
                     />
                   ))}
                 </div>
                 <span className="text-sm font-medium">
-                  {serviceData.rating} ({serviceData.reviews} reviews)
+                  {averageRating} ({evaluations.length} reviews)
                 </span>
               </div>
             </div>
           </div>
         </motion.div>
 
-        {/* Description */}
+        {/* Description and Map */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
           className="mb-8"
         >
-          <Card className="bg-black/30 backdrop-blur-md border border-white/10">
-            <CardContent className="p-6">
-              <h2 className="text-xl font-bold mb-4">About this service</h2>
-              <p className="text-gray-300">{serviceData.description}</p>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-2">
+              <Card className="bg-black/30 backdrop-blur-md border border-white/10">
+                <CardContent className="p-6">
+                  <h2 className="text-xl font-bold mb-4">About this service</h2>
+                  <p className="text-gray-300">Information about {service.name} in the {service.category} category.</p>
+                </CardContent>
+              </Card>
+            </div>
+            <div>
+              <Card className="bg-black/30 backdrop-blur-md border border-white/10">
+                <CardContent className="p-6">
+                  <h2 className="text-xl font-bold mb-4">Location</h2>
+                  <div className="rounded-lg h-[200px]">
+                    <div className="bg-gray-800 rounded-lg h-full flex items-center justify-center">
+                      <p className="text-gray-500">Location data not available</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </motion.div>
 
         {/* Analytics Section */}
@@ -206,7 +266,7 @@ export default function ServiceDetailPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={serviceData.sentimentData}
+                        data={sentimentData}
                         cx="50%"
                         cy="50%"
                         labelLine={false}
@@ -215,7 +275,7 @@ export default function ServiceDetailPage() {
                         dataKey="value"
                         label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                       >
-                        {serviceData.sentimentData.map((entry, index) => (
+                        {sentimentData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
@@ -247,52 +307,62 @@ export default function ServiceDetailPage() {
 
             <TabsContent value="reviews" className="mt-0">
               <div className="space-y-6">
-                {serviceData.comments.map((comment) => (
-                  <Card key={comment.id} className="bg-black/30 backdrop-blur-md border border-white/10">
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-4">
-                        <Avatar>
-                          <AvatarImage src={comment.avatar} alt={comment.user} />
-                          <AvatarFallback>{comment.user.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-2">
-                            <div>
-                              <h4 className="font-medium">{comment.user}</h4>
-                              <div className="flex items-center gap-2 text-sm text-gray-400">
-                                <Calendar className="h-3 w-3" />
-                                <span>{comment.date}</span>
+                {isLoadingEvaluations ? (
+                  <div className="text-center py-4">
+                    <div className="animate-pulse">Loading reviews...</div>
+                  </div>
+                ) : evaluations.length > 0 ? (
+                  evaluations.map((evaluation) => (
+                    <Card key={evaluation.id} className="bg-black/30 backdrop-blur-md border border-white/10">
+                      <CardContent className="p-6">
+                        <div className="flex items-start gap-4">
+                          <Avatar>
+                            <AvatarImage src={evaluation.user?.avatar || "/placeholder.svg?height=40&width=40"} alt={evaluation.user?.name || 'User'} />
+                            <AvatarFallback>{(evaluation.user?.name || 'U').charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-2">
+                              <div>
+                                <h4 className="font-medium">{evaluation.user?.name || 'Anonymous User'}</h4>
+                                <div className="flex items-center gap-2 text-sm text-gray-400">
+                                  <Calendar className="h-3 w-3" />
+                                  <span>{new Date(evaluation.created_at).toLocaleDateString()}</span>
+                                </div>
+                              </div>
+                              <div className="flex">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    className={`h-4 w-4 ${star <= evaluation.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-400"}`}
+                                  />
+                                ))}
                               </div>
                             </div>
-                            <div className="flex">
-                              {[1, 2, 3, 4, 5].map((star) => (
-                                <Star
-                                  key={star}
-                                  className={`h-4 w-4 ${star <= comment.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-400"}`}
-                                />
-                              ))}
+                            <p className="text-gray-300 mb-4">{evaluation.comment}</p>
+                            <div className="flex items-center gap-4">
+                              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white gap-2">
+                                <ThumbsUp className="h-4 w-4" />
+                                <span>{evaluation.likes || 0}</span>
+                              </Button>
+                              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white gap-2">
+                                <ThumbsDown className="h-4 w-4" />
+                                <span>{evaluation.dislikes || 0}</span>
+                              </Button>
+                              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white gap-2">
+                                <MessageSquare className="h-4 w-4" />
+                                <span>Reply</span>
+                              </Button>
                             </div>
                           </div>
-                          <p className="text-gray-300 mb-4">{comment.text}</p>
-                          <div className="flex items-center gap-4">
-                            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white gap-2">
-                              <ThumbsUp className="h-4 w-4" />
-                              <span>{comment.likes}</span>
-                            </Button>
-                            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white gap-2">
-                              <ThumbsDown className="h-4 w-4" />
-                              <span>{comment.dislikes}</span>
-                            </Button>
-                            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white gap-2">
-                              <MessageSquare className="h-4 w-4" />
-                              <span>Reply</span>
-                            </Button>
-                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-gray-400">
+                    <p>No reviews yet. Be the first to leave a review!</p>
+                  </div>
+                )}
               </div>
             </TabsContent>
 

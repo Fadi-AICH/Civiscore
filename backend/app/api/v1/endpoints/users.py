@@ -1,4 +1,5 @@
 from typing import Any, List, Optional
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -59,7 +60,7 @@ def read_user(
     *,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    user_id: int
+    user_id: UUID
 ) -> Any:
     """
     Get a specific user by id.
@@ -89,7 +90,7 @@ def update_user_route(
     *,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    user_id: int,
+    user_id: UUID,
     user_in: UserUpdate
 ) -> Any:
     """
@@ -157,7 +158,7 @@ def delete_user_route(
     *,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user),
-    user_id: int
+    user_id: UUID
 ) -> None:
     """
     Delete a user.

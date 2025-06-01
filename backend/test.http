@@ -1,0 +1,407 @@
+###############################################################################
+# Fichier de test pour l'API Civiscore
+# Utiliser avec l'extension REST Client dans Visual Studio Code
+# Exécuter les requêtes bloc par bloc (Send Request)
+###############################################################################
+
+@baseUrl = http://localhost:8000
+@contentType = application/json
+
+###############################################################################
+# 1. CRÉATION D'UN UTILISATEUR (REGISTER)
+###############################################################################
+
+POST {{baseUrl}}/api/v1/auth/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "tfadsest@example.com",
+  "username": "tesuserf",
+  "password": "Password123!",
+  "full_name": "Test User"
+}
+
+###############################################################################
+# 2. CONNEXION (LOGIN) ET RÉCUPÉRATION DU TOKEN JWT
+###############################################################################
+
+# @name login
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: application/x-www-form-urlencoded
+
+username=tfadsest@example.com&password=Password123!
+
+###
+
+# Extraction et stockage du token JWT pour les requêtes suivantes
+@authToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDg4MDMwMTksInN1YiI6IjBlZTc4NDYyLTNiYzgtNDk2Yy1iNTRjLTY1MjRiNWJmMWJkMiJ9.VB-3WzFqf7Cu6kTQURH246kpvDZo21T9AU3oBwNLmcg
+
+###############################################################################
+# 3. CRÉATION D'UN PAYS
+###############################################################################
+
+POST {{baseUrl}}/api/v1/countries/
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Maroc",
+  "code": "MA",
+  "flag_url": "https://flagcdn.com/ma.svg",
+  "region": "Afrique du Nord",
+  "latitude": 31.7917,
+  "longitude": -7.0926,
+  "population": 36910560,
+  "description": "Le Royaume du Maroc est un pays situé au nord-ouest de l'Afrique."
+}
+
+###
+
+# Création d'un second pays pour les tests
+POST {{baseUrl}}/api/v1/countries/
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "France",
+  "code": "FR",
+  "flag_url": "https://flagcdn.com/fr.svg",
+  "region": "Europe de l'Ouest",
+  "latitude": 46.603354,
+  "longitude": 1.888334,
+  "population": 67391582,
+  "description": "La République française est un pays transcontinental dont le territoire métropolitain est situé en Europe de l'Ouest."
+}
+
+###############################################################################
+# 4. RÉCUPÉRATION DE TOUS LES PAYS
+###############################################################################
+
+GET {{baseUrl}}/api/v1/countries/
+Authorization: Bearer {{authToken}}
+
+###
+
+# Stockage des IDs des pays pour les utiliser plus tard
+# Après avoir exécuté la requête précédente, copiez l'UUID du Maroc et de la France ici:
+@moroccoId = 00000000-0000-0000-0000-000000000000
+@franceId = 00000000-0000-0000-0000-000000000001
+
+###############################################################################
+# 5. CRÉATION D'UN SERVICE LIÉ À UN PAYS
+###############################################################################
+
+# Service au Maroc
+POST {{baseUrl}}/api/v1/services/
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Office National des Impôts",
+  "description": "Service des impôts et taxes au Maroc",
+  "category": "Finances",
+  "country_id": "{{moroccoId}}",
+  "address": "Avenue Annakhil, Hay Riad, Rabat",
+  "website": "https://www.tax.gov.ma",
+  "phone": "+212 5377-13700",
+  "email": "contact@tax.gov.ma",
+  "image_url": "https://example.com/images/tax-office.jpg",
+  "latitude": 34.0132,
+  "longitude": -6.8326,
+  "opening_hours": "Lundi-Vendredi: 8h30-16h30"
+}
+
+###
+
+# Service en France
+POST {{baseUrl}}/api/v1/services/
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Caisse d'Allocations Familiales",
+  "description": "Service public français chargé du versement des prestations familiales",
+  "category": "Sécurité Sociale",
+  "country_id": "{{franceId}}",
+  "address": "32 Avenue de la Libération, 75019 Paris",
+  "website": "https://www.caf.fr",
+  "phone": "+33 1 45 72 30 00",
+  "email": "contact@caf.fr",
+  "image_url": "https://example.com/images/caf.jpg",
+  "latitude": 48.8566,
+  "longitude": 2.3522,
+  "opening_hours": "Lundi-Vendredi: 9h00-17h00"
+}
+
+###############################################################################
+# 6. RÉCUPÉRATION DE TOUS LES SERVICES
+###############################################################################
+
+GET {{baseUrl}}/api/v1/services/
+Authorization: Bearer {{authToken}}
+
+###
+
+# Stockage des IDs des services pour les utiliser plus tard
+# Après avoir exécuté la requête précédente, copiez les UUIDs ici:
+@moroccoServiceId = 00000000-0000-0000-0000-000000000002
+@franceServiceId = 00000000-0000-0000-0000-000000000003
+
+###############################################################################
+# 7. CRÉATION D'UN CRITÈRE D'ÉVALUATION
+###############################################################################
+
+# Critère 1: Temps d'attente
+POST {{baseUrl}}/api/v1/evaluation-criteria/
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Temps d'attente",
+  "description": "Évaluation du temps d'attente pour accéder au service",
+  "category": "Efficacité",
+  "weight": 1.5
+}
+
+###
+
+# Critère 2: Qualité de service
+POST {{baseUrl}}/api/v1/evaluation-criteria/
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Qualité de service",
+  "description": "Évaluation de la qualité globale du service fourni",
+  "category": "Satisfaction",
+  "weight": 2.0
+}
+
+###
+
+# Critère 3: Accessibilité
+POST {{baseUrl}}/api/v1/evaluation-criteria/
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Accessibilité",
+  "description": "Facilité d'accès au service pour tous les citoyens",
+  "category": "Inclusion",
+  "weight": 1.8
+}
+
+###
+
+# Critère 4: Transparence
+POST {{baseUrl}}/api/v1/evaluation-criteria/
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Transparence",
+  "description": "Clarté des procédures et des informations fournies",
+  "category": "Gouvernance",
+  "weight": 1.7
+}
+
+###
+
+# Récupération des critères pour obtenir leurs IDs
+GET {{baseUrl}}/api/v1/evaluation-criteria/
+Authorization: Bearer {{authToken}}
+
+###
+
+# Stockage des IDs des critères pour les utiliser plus tard
+# Après avoir exécuté la requête précédente, copiez les UUIDs ici:
+@criteriaId1 = 00000000-0000-0000-0000-000000000004
+@criteriaId2 = 00000000-0000-0000-0000-000000000005
+@criteriaId3 = 00000000-0000-0000-0000-000000000006
+@criteriaId4 = 00000000-0000-0000-0000-000000000007
+
+###############################################################################
+# 8. CRÉATION D'UNE ÉVALUATION AVEC CRITÈRES
+###############################################################################
+
+# Évaluation du service marocain
+POST {{baseUrl}}/api/v1/evaluations/
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+{
+  "score": 7.5,
+  "comment": "Service correct mais temps d'attente trop long. Le personnel est compétent.",
+  "service_id": "{{moroccoServiceId}}",
+  "criteria_scores": [
+    {
+      "criteria_id": "{{criteriaId1}}",
+      "score": 5.0
+    },
+    {
+      "criteria_id": "{{criteriaId2}}",
+      "score": 8.0
+    },
+    {
+      "criteria_id": "{{criteriaId3}}",
+      "score": 7.0
+    },
+    {
+      "criteria_id": "{{criteriaId4}}",
+      "score": 8.5
+    }
+  ]
+}
+
+###
+
+# Évaluation du service français
+POST {{baseUrl}}/api/v1/evaluations/
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+{
+  "score": 8.2,
+  "comment": "Bon service, personnel accueillant et procédures claires. Le site web pourrait être amélioré.",
+  "service_id": "{{franceServiceId}}",
+  "criteria_scores": [
+    {
+      "criteria_id": "{{criteriaId1}}",
+      "score": 7.5
+    },
+    {
+      "criteria_id": "{{criteriaId2}}",
+      "score": 8.5
+    },
+    {
+      "criteria_id": "{{criteriaId3}}",
+      "score": 9.0
+    }
+  ]
+}
+
+###
+
+# Récupération des évaluations pour obtenir leurs IDs
+GET {{baseUrl}}/api/v1/evaluations/
+Authorization: Bearer {{authToken}}
+
+###
+
+# Stockage des IDs des évaluations pour les utiliser plus tard
+# Après avoir exécuté la requête précédente, copiez les UUIDs ici:
+@evaluationId1 = 00000000-0000-0000-0000-000000000008
+@evaluationId2 = 00000000-0000-0000-0000-000000000009
+
+###############################################################################
+# 9. CRÉATION D'UN RAPPORT SUR UNE ÉVALUATION
+###############################################################################
+
+POST {{baseUrl}}/api/v1/evaluation-reports/
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+{
+  "evaluation_id": "{{evaluationId1}}",
+  "reason": "inappropriate_content",
+  "description": "Cette évaluation contient des propos inappropriés et non constructifs."
+}
+
+###############################################################################
+# 10. AJOUT D'UN VOTE SUR UNE ÉVALUATION
+###############################################################################
+
+POST {{baseUrl}}/api/v1/evaluation-votes/
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+{
+  "evaluation_id": "{{evaluationId2}}",
+  "is_helpful": true
+}
+
+###
+
+# Vote négatif sur une autre évaluation
+POST {{baseUrl}}/api/v1/evaluation-votes/
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+{
+  "evaluation_id": "{{evaluationId1}}",
+  "is_helpful": false
+}
+
+###############################################################################
+# REQUÊTES SUPPLÉMENTAIRES
+###############################################################################
+
+# Récupération d'un pays spécifique
+GET {{baseUrl}}/api/v1/countries/{{moroccoId}}
+Authorization: Bearer {{authToken}}
+
+###
+
+# Récupération d'un service spécifique
+GET {{baseUrl}}/api/v1/services/{{moroccoServiceId}}
+Authorization: Bearer {{authToken}}
+
+###
+
+# Récupération des services par pays
+GET {{baseUrl}}/api/v1/services/?country_id={{franceId}}
+Authorization: Bearer {{authToken}}
+
+###
+
+# Récupération des services par catégorie
+GET {{baseUrl}}/api/v1/services/?category=Finances
+Authorization: Bearer {{authToken}}
+
+###
+
+# Récupération des évaluations par service
+GET {{baseUrl}}/api/v1/evaluations/?service_id={{moroccoServiceId}}
+Authorization: Bearer {{authToken}}
+
+###
+
+# Récupération des statistiques d'évaluation pour un service
+GET {{baseUrl}}/api/v1/evaluations/stats/?service_id={{moroccoServiceId}}
+Authorization: Bearer {{authToken}}
+
+###
+
+# Mise à jour d'une évaluation
+PUT {{baseUrl}}/api/v1/evaluations/{{evaluationId1}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+{
+  "score": 6.5,
+  "comment": "Mise à jour : Service correct mais temps d'attente vraiment trop long. Le personnel reste compétent."
+}
+
+###
+
+# Suppression d'une évaluation
+DELETE {{baseUrl}}/api/v1/evaluations/{{evaluationId1}}
+Authorization: Bearer {{authToken}}
+
+###
+
+# Récupération du profil utilisateur actuel
+GET {{baseUrl}}/api/v1/users/me
+Authorization: Bearer {{authToken}}
+
+###
+
+# Mise à jour du profil utilisateur
+PUT {{baseUrl}}/api/v1/users/me
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+{
+  "full_name": "Test User Updated",
+  "bio": "Utilisateur de test pour l'API Civiscore"
+}

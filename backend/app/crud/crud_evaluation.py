@@ -1,5 +1,6 @@
 from typing import Any, Dict, Optional, Union, List, Tuple
 from datetime import datetime, timedelta
+from uuid import UUID
 
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import asc, desc, func, or_, and_, cast, Float
@@ -12,7 +13,7 @@ from app.schemas.evaluation import EvaluationCreate, EvaluationUpdate
 from app.crud.crud_service import update_service_rating, get_service_by_id
 
 
-def create_evaluation(db: Session, evaluation: EvaluationCreate, user_id: int) -> Evaluation:
+def create_evaluation(db: Session, evaluation: EvaluationCreate, user_id: UUID) -> Evaluation:
     """Create a new evaluation and update service rating"""
     # Déterminer si l'évaluation doit être automatiquement approuvée ou mise en attente
     # Par défaut, les évaluations sont en attente de modération
@@ -45,9 +46,9 @@ def create_evaluation(db: Session, evaluation: EvaluationCreate, user_id: int) -
 
 def update_evaluation(
     db: Session, 
-    evaluation_id: int, 
+    evaluation_id: UUID, 
     evaluation_update: EvaluationUpdate, 
-    user_id: int
+    user_id: UUID
 ) -> Optional[Evaluation]:
     """Update an existing evaluation"""
     # Get the evaluation
@@ -75,7 +76,7 @@ def update_evaluation(
     return db_evaluation
 
 
-def delete_evaluation(db: Session, evaluation_id: int, user_id: int, is_admin: bool = False) -> Tuple[bool, str]:
+def delete_evaluation(db: Session, evaluation_id: UUID, user_id: UUID, is_admin: bool = False) -> Tuple[bool, str]:
     """Delete an evaluation"""
     # Get the evaluation
     db_evaluation = get_evaluation_by_id(db, evaluation_id)
@@ -101,7 +102,7 @@ def delete_evaluation(db: Session, evaluation_id: int, user_id: int, is_admin: b
     return True, ""
 
 
-def get_evaluation_by_id(db: Session, evaluation_id: int) -> Optional[Evaluation]:
+def get_evaluation_by_id(db: Session, evaluation_id: UUID) -> Optional[Evaluation]:
     """Get an evaluation by ID"""
     return db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
 
@@ -111,8 +112,8 @@ def get_evaluations(
     *,
     page: int = 1,
     limit: int = 10,
-    service_id: Optional[int] = None,
-    user_id: Optional[int] = None,
+    service_id: Optional[UUID] = None,
+    user_id: Optional[UUID] = None,
     min_score: Optional[float] = None,
     max_score: Optional[float] = None,
     search_comment: Optional[str] = None,
@@ -182,7 +183,7 @@ def get_evaluations(
 
 def get_evaluations_by_service(
     db: Session, 
-    service_id: int,
+    service_id: UUID,
     skip: int = 0, 
     limit: int = 100,
     include_user: bool = False,
@@ -215,7 +216,7 @@ def get_evaluations_by_service(
 
 def get_evaluations_by_user(
     db: Session, 
-    user_id: int,
+    user_id: UUID,
     skip: int = 0, 
     limit: int = 100,
     include_service: bool = False
@@ -233,7 +234,7 @@ def get_evaluations_by_user(
     return query.all()
 
 
-def get_evaluation_stats(db: Session, service_id: Optional[int] = None) -> Dict[str, Any]:
+def get_evaluation_stats(db: Session, service_id: Optional[UUID] = None) -> Dict[str, Any]:
     """Get statistics for evaluations"""
     # Base query
     query = db.query(Evaluation)
@@ -290,7 +291,7 @@ def get_evaluation_stats(db: Session, service_id: Optional[int] = None) -> Dict[
     }
 
 
-def check_user_has_evaluated_service(db: Session, user_id: int, service_id: int) -> Optional[Evaluation]:
+def check_user_has_evaluated_service(db: Session, user_id: UUID, service_id: UUID) -> Optional[Evaluation]:
     """Check if a user has already evaluated a service"""
     return db.query(Evaluation).filter(
         Evaluation.user_id == user_id,
@@ -298,7 +299,7 @@ def check_user_has_evaluated_service(db: Session, user_id: int, service_id: int)
     ).first()
 
 
-def _update_service_average_rating(db: Session, service_id: int) -> None:
+def _update_service_average_rating(db: Session, service_id: UUID) -> None:
     """Update a service's rating based on the average of all evaluations"""
     # Calculate average score
     result = db.query(func.avg(Evaluation.score)).filter(Evaluation.service_id == service_id).scalar()

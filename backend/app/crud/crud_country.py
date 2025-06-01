@@ -1,4 +1,5 @@
 from typing import Any, Dict, Optional, Union, List, Tuple
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 from sqlalchemy import asc, desc, func
@@ -62,7 +63,7 @@ def get_countries(
     return query.all(), total
 
 
-def get_country_by_id(db: Session, country_id: int) -> Optional[Country]:
+def get_country_by_id(db: Session, country_id: UUID) -> Optional[Country]:
     """Get a country by ID"""
     return db.query(Country).filter(Country.id == country_id).first()
 
@@ -86,7 +87,9 @@ def create_country(db: Session, country: CountryCreate) -> Country:
     return db_country
 
 
-def update_country(db: Session, country_id: int, country_update: CountryUpdate) -> Optional[Country]:
+def update_country(
+    db: Session, country_id: UUID, country_update: CountryUpdate
+) -> Optional[Country]:
     """
     Update a country's name
     
@@ -114,7 +117,7 @@ def update_country(db: Session, country_id: int, country_update: CountryUpdate) 
         raise e
 
 
-def delete_country(db: Session, country_id: int) -> Tuple[bool, Optional[str]]:
+def delete_country(db: Session, country_id: UUID) -> Tuple[bool, Optional[str]]:
     """
     Delete a country by ID if it's not used by any service
     
