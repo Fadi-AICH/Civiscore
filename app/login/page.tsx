@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 
+type Particle = { x: number; y: number; size: number; vx: number; vy: number; color: string };
+
 export default function LoginPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -20,14 +22,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [name, setName] = useState("")
   const [activeTab, setActiveTab] = useState("login")
-  const [particles, setParticles] = useState<
-    Array<{ x: number; y: number; size: number; vx: number; vy: number; color: string }>
-  >([])
+  const [particles, setParticles] = useState<Particle[]>([])
 
   // Create particles for background
   useEffect(() => {
     const particleCount = Math.min(Math.floor(window.innerWidth * 0.05), 100)
-    const newParticles = []
+    const newParticles: Particle[] = []
 
     for (let i = 0; i < particleCount; i++) {
       newParticles.push({

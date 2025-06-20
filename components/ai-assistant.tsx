@@ -27,8 +27,8 @@ export default function AIAssistant() {
 
   useEffect(() => {
     // Initialize speech recognition
-    if ("SpeechRecognition" in window || "webkitSpeechRecognition" in window) {
-      const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)) {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
       recognitionRef.current = new SpeechRecognition()
       recognitionRef.current.continuous = false
       recognitionRef.current.interimResults = true
@@ -123,16 +123,16 @@ export default function AIAssistant() {
             {
               role: "assistant",
               content: "Speech recognition failed to start. Please try again or type your message.",
-            },
+            } as Message,
           ])
         }
       } else {
         setMessages((prev) => [
           ...prev,
           {
-            role: "assistant",
+            role: "assistant" as const,
             content: "Speech recognition is not supported in your browser. Please type your message instead.",
-          },
+          } as Message,
         ])
       }
     }
@@ -141,7 +141,7 @@ export default function AIAssistant() {
   const handleUserMessage = async (text: string) => {
     if (!text.trim()) return
 
-    const userMessage = { role: "user", content: text }
+    const userMessage: Message = { role: "user", content: text }
     setMessages((prev) => [...prev, userMessage])
     setTranscript("")
     setIsLoading(true)
@@ -151,7 +151,7 @@ export default function AIAssistant() {
       await new Promise((resolve) => setTimeout(resolve, 1000))
       const responseText = "I understand your request. However, I'm currently in demo mode and can't process actual queries."
 
-      const assistantMessage = { role: "assistant", content: responseText }
+      const assistantMessage: Message = { role: "assistant", content: responseText }
       setMessages((prev) => [...prev, assistantMessage])
 
       // Speak the response if speech synthesis is available
@@ -166,9 +166,9 @@ export default function AIAssistant() {
       setMessages((prev) => [
         ...prev,
         {
-          role: "assistant",
+          role: "assistant" as const,
           content: "I'm sorry, I encountered an error. Please try again.",
-        },
+        } as Message,
       ])
     } finally {
       setIsLoading(false)

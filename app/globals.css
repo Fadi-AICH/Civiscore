@@ -1,8 +1,19 @@
+html, body, #__next {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto; 
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  
+
+  #__next { /* Add this for Next.js apps */
+    height: 100%;
+  }
   :root {
     --background: 210 100% 98%;
     --foreground: 222.2 84% 4.9%;

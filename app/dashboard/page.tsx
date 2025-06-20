@@ -268,8 +268,7 @@ export default function DashboardPage() {
                     </div>
                     <Progress
                       value={userData.stats.contributionLevel}
-                      className="h-1 mt-1 bg-white/10"
-                      indicatorClassName="bg-purple-500"
+                      className="h-1 mt-1 bg-white/10 [&>div]:bg-purple-500"
                     />
                   </div>
                 </CardContent>
@@ -424,7 +423,7 @@ export default function DashboardPage() {
                   <Progress
                     value={userData.stats.contributionLevel}
                     className="h-2 bg-white/10"
-                    indicatorClassName="bg-blue-500"
+                    
                   />
                 </div>
 
@@ -501,7 +500,7 @@ export default function DashboardPage() {
                       <Progress
                         value={(userData.totalReviews / 100) * 100}
                         className="h-2 bg-white/10"
-                        indicatorClassName="bg-blue-500"
+                        
                       />
                     </div>
 
@@ -513,7 +512,7 @@ export default function DashboardPage() {
                       <Progress
                         value={(userData.stats.countriesVisited / 25) * 100}
                         className="h-2 bg-white/10"
-                        indicatorClassName="bg-green-500"
+                        
                       />
                     </div>
                   </div>

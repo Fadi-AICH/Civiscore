@@ -1,256 +1,132 @@
-"use client"
-import InteractiveGlobe from "@/components/InteractiveGlobe";
-import { useState, useEffect, useRef } from "react"
-import { motion } from "framer-motion"
-import { Search, ChevronRight, Sparkles, Menu, User, Info } from "lucide-react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import ParticleBackground from "@/components/particle-background"
-import StatsCounter from "@/components/stats-counter"
-import Logo from "@/components/logo"
-import { COUNTRIES_DATA, TOP_RATED_COUNTRIES, BEST_HEALTHCARE_COUNTRIES } from "@/lib/countries-data"
-import { useTheme } from "next-themes"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
+// app/page.tsx
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import countriesData from "../public/countries.json";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import ParticleBackground from "@/components/particle-background";
+import StatsCounter from "@/components/stats-counter";
+import Logo from "@/components/logo";
+import { COUNTRIES_DATA, TOP_RATED_COUNTRIES, BEST_HEALTHCARE_COUNTRIES } from "@/lib/countries-data";
+import { useTheme } from "next-themes";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Search, ChevronRight, Sparkles, Menu, User, Info } from "lucide-react";
+import { motion } from "framer-motion";
+
+// Dynamically import the Globe component with no SSR
+const Globe = dynamic(() => import("react-globe.gl"), { ssr: false });
+
+// Define types for our country data
+interface CountryFeature {
+  type: string;
+  properties: {
+    name: string;
+    iso_a3: string;
+  };
+  geometry: {
+    type: string;
+    coordinates: any[];
+  };
+}
+
+// NOTE: This component is named 'Home' to align with Next.js conventions for the root page.
 export default function Home() {
-  const router = useRouter()
-  const { theme } = useTheme()
-  const [hoveredCountry, setHoveredCountry] = useState("")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [searchResults, setSearchResults] = useState<any[]>([])
-  const [showResults, setShowResults] = useState(false)
-  const [activeRegion, setActiveRegion] = useState<string | null>(null)
-  const [highlightedCountries, setHighlightedCountries] = useState<any[]>([])
-  const [windowSize, setWindowSize] = useState({
-    width: typeof window !== "undefined" ? window.innerWidth : 0,
-    height: typeof window !== "undefined" ? window.innerHeight : 0,
-  })
+  const router = useRouter();
+  const { theme } = useTheme();
+  const globeRef = useRef<any>(null);
+  const globeContainerRef = useRef<HTMLDivElement>(null);
 
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const animationFrameId = useRef<number>(0)
+  const [countries, setCountries] = useState<any[]>([]);
+  const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const [isClient, setIsClient] = useState(false);
 
-  // Make sure all countries are visible by default when the page loads
+  // --- CORRECTED: Move search and filter state declarations here, before their useEffects ---
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showResults, setShowResults] = useState(false);
+  const [activeRegion, setActiveRegion] = useState<string | null>(null);
+  const [highlightedCountries, setHighlightedCountries] = useState<any[]>([]);
+  // --- END CORRECTED ---
+
+  // --- START NEW GLOBE INTEGRATION LOGIC ---
   useEffect(() => {
-    resetFilters()
-  }, [])
+    // Set isClient to true once component is mounted
+    setIsClient(true);
 
-  // Track window size for responsive adjustments
-  useEffect(() => {
-    const handleResize = () => {
-      setWindowSize({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      })
+    // Set dimensions based on globe container size
+    const updateDimensions = () => {
+      if (globeContainerRef.current) {
+        setDimensions({
+          width: globeContainerRef.current.clientWidth,
+          height: globeContainerRef.current.clientHeight
+        });
+      }
+    };
+
+    // Initial dimensions
+    updateDimensions();
+
+    // Add ResizeObserver for responsiveness
+    const resizeObserver = new ResizeObserver(updateDimensions);
+    if (globeContainerRef.current) {
+      resizeObserver.observe(globeContainerRef.current);
     }
 
-    window.addEventListener("resize", handleResize)
-    return () => window.removeEventListener("resize", handleResize)
-  }, [])
-
-  // Modern data visualization instead of the globe
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
-
-    // Set canvas dimensions
-    const resizeCanvas = () => {
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
+    // Load countries data and assign colors
+    if (countriesData && Array.isArray(countriesData.features)) {
+      const processedCountries = (countriesData.features as unknown as CountryFeature[]).map((feature) => {
+        const color = `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0')}`;
+        return {
+          id: feature.properties.iso_a3,
+          name: feature.properties.name,
+          color,
+          // Maintain the proper GeoJSON structure for polygonsData
+          coordinates: feature.geometry.coordinates,
+          geometry: feature.geometry
+        };
+      });
+      setCountries(processedCountries);
     }
 
-    window.addEventListener("resize", resizeCanvas)
-    resizeCanvas()
-
-    // Create nodes for countries
-    const nodes = COUNTRIES_DATA.map((country) => {
-      return {
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        radius: country.rating * 3 + 5,
-        color: getColorByRating(country.rating),
-        name: country.name,
-        region: country.region,
-        rating: country.rating,
-        vx: (Math.random() - 0.5) * 0.5,
-        vy: (Math.random() - 0.5) * 0.5,
-        highlighted: false,
-        countryData: country,
-      }
-    })
-
-    // Function to get color based on rating
-    function getColorByRating(rating: number) {
-      if (rating >= 4.5) return "#10b981" // Green
-      if (rating >= 4.0) return "#3b82f6" // Blue
-      if (rating >= 3.5) return "#6366f1" // Indigo
-      if (rating >= 3.0) return "#f59e0b" // Amber
-      return "#ef4444" // Red
-    }
-
-    // Animation function
-    const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-
-      // Draw connections between nodes
-      ctx.strokeStyle = theme === "dark" ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.05)"
-      ctx.lineWidth = 1
-
-      for (let i = 0; i < nodes.length; i++) {
-        for (let j = i + 1; j < nodes.length; j++) {
-          if (nodes[i].region === nodes[j].region) {
-            const dx = nodes[i].x - nodes[j].x
-            const dy = nodes[i].y - nodes[j].y
-            const distance = Math.sqrt(dx * dx + dy * dy)
-
-            if (distance < 200) {
-              ctx.beginPath()
-              ctx.moveTo(nodes[i].x, nodes[i].y)
-              ctx.lineTo(nodes[j].x, nodes[j].y)
-              ctx.stroke()
-            }
-          }
+    // Auto-rotate the globe after a short delay to ensure it's loaded
+    const timer = setTimeout(() => {
+      if (globeRef.current) {
+        const controls = globeRef.current.controls();
+        if (controls) {
+          controls.autoRotate = true;
+          controls.autoRotateSpeed = 0.5;
         }
       }
-
-      // Update and draw nodes
-      for (let i = 0; i < nodes.length; i++) {
-        const node = nodes[i]
-
-        // Update position
-        node.x += node.vx
-        node.y += node.vy
-
-        // Bounce off edges
-        if (node.x < node.radius || node.x > canvas.width - node.radius) {
-          node.vx *= -1
-        }
-        if (node.y < node.radius || node.y > canvas.height - node.radius) {
-          node.vy *= -1
-        }
-
-        // Draw node
-        ctx.beginPath()
-        ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2)
-
-        // Highlight nodes based on filters
-        if (
-          (activeRegion && node.region === activeRegion) ||
-          highlightedCountries.some((c) => c.name === node.name) ||
-          node.highlighted
-        ) {
-          ctx.fillStyle = node.color
-          ctx.strokeStyle = "#ffffff"
-          ctx.lineWidth = 2
-        } else if (activeRegion || highlightedCountries.length > 0) {
-          ctx.fillStyle = `${node.color}80` // Semi-transparent
-          ctx.strokeStyle = `${node.color}80`
-          ctx.lineWidth = 1
-        } else {
-          // Default state - all nodes fully visible
-          ctx.fillStyle = node.color
-          ctx.strokeStyle = "rgba(255, 255, 255, 0.3)"
-          ctx.lineWidth = 1
-        }
-
-        ctx.fill()
-        ctx.stroke()
-
-        // Always draw country name for better visibility
-        if (
-          node.highlighted ||
-          (activeRegion && node.region === activeRegion) ||
-          highlightedCountries.some((c) => c.name === node.name)
-        ) {
-          ctx.font = "12px Arial"
-          ctx.fillStyle = theme === "dark" ? "#ffffff" : "#000000"
-          ctx.textAlign = "center"
-          ctx.fillText(node.name, node.x, node.y - node.radius - 5)
-        }
-      }
-
-      animationFrameId.current = requestAnimationFrame(animate)
-    }
-
-    // Start animation
-    animate()
-
-    // Handle mouse interaction
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect()
-      const x = e.clientX - rect.left
-      const y = e.clientY - rect.top
-
-      let hoveredNode = null
-
-      for (const node of nodes) {
-        const dx = node.x - x
-        const dy = node.y - y
-        const distance = Math.sqrt(dx * dx + dy * dy)
-
-        if (distance < node.radius) {
-          hoveredNode = node
-          break
-        }
-      }
-
-      // Reset all nodes
-      for (const node of nodes) {
-        node.highlighted = false
-      }
-
-      // Highlight hovered node
-      if (hoveredNode) {
-        hoveredNode.highlighted = true
-        setHoveredCountry(hoveredNode.name)
-
-        // Change cursor to pointer to indicate clickable
-        canvas.style.cursor = "pointer"
-      } else {
-        setHoveredCountry("")
-        canvas.style.cursor = "default"
-      }
-    }
-
-    // Handle click to navigate to country page
-    const handleMouseClick = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect()
-      const x = e.clientX - rect.left
-      const y = e.clientY - rect.top
-
-      for (const node of nodes) {
-        const dx = node.x - x
-        const dy = node.y - y
-        const distance = Math.sqrt(dx * dx + dy * dy)
-
-        if (distance < node.radius) {
-          // Navigate to country page when clicked
-          const countrySlug = node.name.toLowerCase().replace(/\s+/g, "-")
-          window.location.href = `/country/${countrySlug}`
-          break
-        }
-      }
-    }
-
-    canvas.addEventListener("mousemove", handleMouseMove)
-    canvas.addEventListener("click", handleMouseClick)
+    }, 1000);
 
     // Cleanup
     return () => {
-      window.removeEventListener("resize", resizeCanvas)
-      canvas.removeEventListener("mousemove", handleMouseMove)
-      canvas.removeEventListener("click", handleMouseClick)
-      cancelAnimationFrame(animationFrameId.current)
-    }
-  }, [theme, activeRegion, highlightedCountries])
+      clearTimeout(timer);
+      if (globeContainerRef.current) {
+        resizeObserver.unobserve(globeContainerRef.current);
+      }
+    };
+  }, []); // Empty dependency array means this effect runs once on mount
+  // --- END NEW GLOBE INTEGRATION LOGIC ---
 
+  // Handle country click (for globe interaction)
+  const handleCountryClick = (country: any) => {
+    // FIX: Encode the country name to handle spaces and special characters
+    const encodedCountryName = encodeURIComponent(country.name);
+    router.push(`/explore?country=${encodedCountryName}`);
+  };
+
+
+  // --- Existing search/filter logic from your original `Home` component ---
   // Handle search functionality
   useEffect(() => {
     if (searchQuery.length < 2) {
@@ -261,7 +137,6 @@ export default function Home() {
 
     const query = searchQuery.toLowerCase()
 
-    // Search countries
     const countryResults = COUNTRIES_DATA.filter((country) => country.name.toLowerCase().includes(query)).map(
       (country) => ({
         type: "country",
@@ -271,7 +146,6 @@ export default function Home() {
       }),
     )
 
-    // Mock service results (in a real app, you'd search a services database)
     const serviceTypes = ["Healthcare", "Education", "Transportation", "Utilities", "Government"]
     const serviceResults = serviceTypes
       .filter((service) => service.toLowerCase().includes(query))
@@ -284,14 +158,13 @@ export default function Home() {
 
     setSearchResults([...countryResults, ...serviceResults].slice(0, 5))
     setShowResults(searchResults.length > 0)
-  }, [searchQuery])
+  }, [searchQuery, searchResults.length]) // Added searchResults.length to dependency array to ensure `showResults` updates correctly
 
   // Hide search results when clicking outside
   useEffect(() => {
     const handleClickOutside = () => {
       setShowResults(false)
     }
-
     document.addEventListener("click", handleClickOutside)
     return () => {
       document.removeEventListener("click", handleClickOutside)
@@ -321,29 +194,31 @@ export default function Home() {
     setActiveRegion(null)
     setHighlightedCountries([])
   }
+  // --- End of existing search/filter logic ---
 
   return (
-    <main className="relative min-h-screen w-full overflow-x-hidden bg-gradient-to-b from-black via-slate-900 to-slate-800 dark:from-black dark:via-slate-900 dark:to-slate-800">
-      {/* Particle Background */}
-      <ParticleBackground />
-
-      {/* Interactive Data Visualization (replacing the globe) */}
-      <div className="absolute inset-0 z-0">
-        <InteractiveGlobe />
-      </div>
-
-      {/* UI Overlay */}
-      <div className="absolute inset-0 z-10 flex flex-col items-center justify-between p-4 md:p-8 overflow-y-auto">
-        {/* Header */}
-        <motion.div
+    // Main wrapper for the entire page layout
+    // flex-col for mobile, flex-row for desktop
+    // min-h-screen ensures it takes full viewport height
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-black via-slate-900 to-slate-800 text-white">
+      <div className="flex-grow pb-16">
+        {/* HEADER SECTION (Always on Top) */}
+        <motion.header
           initial={{ opacity: 0, y: -50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.2 }}
-          className="w-full flex justify-between items-center"
+          className="relative z-30 w-full p-2 md:px-6 md:py-3 flex justify-between items-center backdrop-blur-md bg-black/30 border-b border-white/10"
         >
-          <Logo size="medium" animated={true} />
+          <Logo size="medium" animated={true} /> {/* Civiscore Logo */}
 
-          {/* Mobile menu */}
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex gap-4 items-center">
+            <Link href="/about"><Button variant="ghost" className="text-white hover:text-white hover:bg-white/10">About</Button></Link>
+            <Link href="/how-it-works"><Button variant="ghost" className="text-white hover:text-white hover:bg-white/10">How it works</Button></Link>
+            <Link href="/login"><Button variant="ghost" className="text-white hover:text-white hover:bg-white/10">Login</Button></Link>
+          </nav>
+
+          {/* Mobile Menu Toggle */}
           <div className="md:hidden">
             <Sheet>
               <SheetTrigger asChild>
@@ -352,274 +227,251 @@ export default function Home() {
                 </Button>
               </SheetTrigger>
               <SheetContent className="bg-slate-900 text-white border-slate-700">
-                <SheetHeader>
-                  <SheetTitle className="text-white">Menu</SheetTitle>
-                </SheetHeader>
+                <SheetHeader><SheetTitle className="text-white">Menu</SheetTitle></SheetHeader>
                 <div className="flex flex-col gap-4 mt-6">
-                  <Link href="/about">
-                    <Button variant="ghost" className="w-full justify-start">
-                      About
-                    </Button>
-                  </Link>
-                  <Link href="/how-it-works">
-                    <Button variant="ghost" className="w-full justify-start">
-                      How it works
-                    </Button>
-                  </Link>
-                  <Link href="/login">
-                    <Button variant="ghost" className="w-full justify-start">
-                      Login
-                    </Button>
-                  </Link>
-                  <Link href="/explore">
-                    <Button className="w-full bg-gradient-to-r from-cyan-500 to-blue-500">Explore Services</Button>
-                  </Link>
+                  <Link href="/about"><Button variant="ghost" className="w-full justify-start">About</Button></Link>
+                  <Link href="/how-it-works"><Button variant="ghost" className="w-full justify-start">How it works</Button></Link>
+                  <Link href="/login"><Button variant="ghost" className="w-full justify-start">Login</Button></Link>
+                  <Link href="/explore"><Button className="w-full bg-gradient-to-r from-cyan-500 to-blue-500">Explore Services</Button></Link>
                 </div>
               </SheetContent>
             </Sheet>
           </div>
+        </motion.header>
 
-          {/* Desktop menu */}
-          <div className="hidden md:flex gap-4 items-center">
-            <Link href="/about">
-              <Button
-                variant="ghost"
-                className="text-white hover:text-white hover:bg-white/10 dark:text-white dark:hover:text-white dark:hover:bg-white/10"
-              >
-                About
-              </Button>
-            </Link>
-            <Link href="/how-it-works">
-              <Button
-                variant="ghost"
-                className="text-white hover:text-white hover:bg-white/10 dark:text-white dark:hover:text-white dark:hover:bg-white/10"
-              >
-                How it works
-              </Button>
-            </Link>
-            <Link href="/login">
-              <Button
-                variant="ghost"
-                className="text-white hover:text-white hover:bg-white/10 dark:text-white dark:hover:text-white dark:hover:bg-white/10"
-              >
-                Login
-              </Button>
-            </Link>
-          </div>
-        </motion.div>
+        {/* MAIN CONTENT AREA: Globe (Left) and Text/Filters (Right) */}
+        <div className="flex flex-grow flex-col md:flex-row relative z-10">
 
-        {/* Center Content */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, delay: 0.5 }}
-          className="flex flex-col items-center justify-center gap-6 max-w-3xl text-center my-8"
-        >
-          <h1 className="text-3xl md:text-6xl font-bold text-white dark:text-white leading-tight">
-            Rate{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
-              public services
-            </span>{" "}
-            around the world
-          </h1>
-          <p className="text-base md:text-lg text-gray-300 dark:text-gray-300 max-w-2xl px-4">
-            Civiscore is a global platform where citizens can rate, review, and improve public services across countries
-            and sectors.
-          </p>
-
-          {/* Data Visualization Controls - Dynamic Filter Buttons */}
-          <div className="flex flex-wrap justify-center gap-2 mb-4 px-4">
-            {/* Main filters */}
-            {[
-              { label: "All Countries", query: "", tooltip: "Show all countries" },
-              { label: "Top Rated", query: "?sort=top", tooltip: "Show top rated countries", icon: <Sparkles className="h-4 w-4 mr-1" /> },
-              { label: "Best Healthcare", query: "?service=healthcare&sort=top", tooltip: "Show countries with best healthcare" },
-            ].map((filter, index) => (
-              <TooltipProvider key={index}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => router.push(`/explore${filter.query}`)}
-                      className="bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20"
-                    >
-                      {filter.icon}
-                      {filter.label}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{filter.tooltip}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            ))}
-
-            {/* Region filters */}
-            <div className="w-full flex flex-wrap justify-center gap-2 mt-2">
-              {[
-                { label: "Europe", query: "?region=Europe" },
-                { label: "Asia", query: "?region=Asia" },
-                { label: "Africa", query: "?region=Africa" },
-                { label: "North America", query: "?region=North%20America" },
-                { label: "South America", query: "?region=South%20America" },
-                { label: "Oceania", query: "?region=Oceania" }
-              ].map((region) => (
-                <Button
-                  key={region.label}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => router.push(`/explore${region.query}`)}
-                  className="bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20"
-                >
-                  {region.label}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          {/* Search Bar with Results */}
-          <div className="relative w-full max-w-md mt-4 px-4" onClick={(e) => e.stopPropagation()}>
-            <div className="absolute inset-y-0 left-0 pl-7 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
-            </div>
-            <Input
-              type="text"
-              placeholder="Search for a country or service..."
-              className="pl-12 pr-4 py-6 w-full bg-black/30 backdrop-blur-md border border-white/10 text-white dark:bg-black/30 dark:border-white/10 dark:text-white rounded-full focus:ring-2 focus:ring-blue-500"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value)
-                if (e.target.value.length >= 2) {
-                  setShowResults(true)
+          {/* LEFT SECTION: Interactive Globe with Particle Background */}
+          <div ref={globeContainerRef} className="relative w-full md:w-1/2 flex-1 flex items-center justify-center overflow-hidden">
+            <ParticleBackground />
+            {isClient && dimensions.width > 0 && dimensions.height > 0 && (
+              <Globe
+                ref={globeRef}
+                width={dimensions.width}
+                height={dimensions.height}
+                backgroundColor="rgba(0,0,0,0)" // Transparent background
+                globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
+                bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
+                polygonsData={countries}
+                polygonCapColor={(d: any) =>
+                  d.id === hoveredCountry ? 'rgba(255, 255, 0, 0.7)' : d.color
                 }
-              }}
-              onFocus={() => {
-                if (searchResults.length > 0) {
-                  setShowResults(true)
-                }
-              }}
-            />
-
-            {/* Search Results Dropdown */}
-            {showResults && searchResults.length > 0 && (
-              <div className="absolute mt-2 w-full bg-black/80 backdrop-blur-md border border-white/10 dark:bg-black/80 dark:border-white/10 rounded-lg shadow-lg z-50 overflow-hidden">
-                <ul>
-                  {searchResults.map((result, index) => (
-                    <li key={index}>
-                      <Link href={result.url}>
-                        <div className="px-4 py-3 hover:bg-white/10 dark:hover:bg-white/10 flex justify-between items-center">
-                          <div>
-                            <p className="text-white dark:text-white">{result.name}</p>
-                            <p className="text-xs text-gray-400 dark:text-gray-400">{result.type}</p>
-                          </div>
-                          <div className="flex items-center">
-                            <span className="text-yellow-400 mr-1">★</span>
-                            <span className="text-white dark:text-white">{result.rating}</span>
-                          </div>
-                        </div>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                polygonSideColor={() => 'rgba(0, 100, 200, 0.3)'}
+                polygonStrokeColor={() => '#111'}
+                polygonLabel={({ name }: any) => `<b>${name}</b>`}
+                onPolygonClick={(polygon: any) => handleCountryClick(polygon)}
+                onPolygonHover={(polygon: any) => {
+                  setHoveredCountry(polygon ? polygon.id : null);
+                }}
+                polygonsTransitionDuration={300}
+                atmosphereColor="#3a228a"
+                atmosphereAltitude={0.25}
+              />
             )}
+            {isClient && (dimensions.width === 0 || dimensions.height === 0) && (
+              <div className="text-white text-xl">Loading Globe...</div>
+            )}
+            {/* Hovered Country Info for Globe */}
+            
           </div>
 
-          {/* CTA Button */}
-          <Link href="/explore" className="mt-4">
-            <Button className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white px-6 py-6 rounded-full text-lg font-medium flex items-center gap-2">
-              Enter Civiscore
-              <ChevronRight className="h-5 w-5" />
-            </Button>
-          </Link>
+          {/* RIGHT SECTION: Text Content, Filters, Search, and CTA */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.5 }}
+            className="w-full md:w-1/2 flex-1 flex flex-col justify-center items-center p-4 md:p-8 text-center md:text-left overflow-y-auto"
 
-          {/* Hovered Country Info */}
-          {hoveredCountry && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="mt-4 px-6 py-3 bg-white/10 backdrop-blur-md dark:bg-white/10 rounded-full text-white dark:text-white"
-            >
-              <div className="flex items-center gap-2">
-                <span className="font-bold">{hoveredCountry}</span>
-                <Badge className="bg-blue-500/20 text-blue-400">Click to view details</Badge>
+          >
+            {/* Main Title and Description */}
+            <h1 className="w-full text-center text-3xl md:text-5xl font-bold text-white dark:text-white leading-tight mb-2">
+              Rate{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+                public services
+              </span>{" "}
+              around the world
+            </h1>
+            <p className="w-full text-center text-base md:text-lg text-gray-300 dark:text-gray-300 mb-4 max-w-2xl px-2">
+              Civiscore is a global platform where citizens can rate, review, and improve public services across countries
+              and sectors.
+            </p>
+
+            {/* Filter Buttons */}
+            <div className="flex flex-wrap justify-center gap-2 mb-4 px-4 w-full max-w-lg">
+              {/* Main filters */}
+              {[
+                { label: "All Countries", query: "", tooltip: "Show all countries" },
+                { label: "Top Rated", query: "?sort=top", tooltip: "Show top rated countries", icon: <Sparkles className="h-4 w-4 mr-1" /> },
+                { label: "Best Healthcare", query: "?service=healthcare&sort=top", tooltip: "Show countries with best healthcare" },
+              ].map((filter, index) => (
+                <TooltipProvider key={index}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push(`/explore${filter.query}`)}
+                        className="bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20"
+                      >
+                        {filter.icon}
+                        {filter.label}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{filter.tooltip}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ))}
+
+              {/* Region filters */}
+              <div className="w-full flex flex-wrap justify-center gap-2 mt-2">
+                {[
+                  { label: "Europe", query: "?region=Europe" },
+                  { label: "Asia", query: "?region=Asia" },
+                  { label: "Africa", query: "?region=Africa" },
+                  { label: "North America", query: "?region=North%20America" },
+                  { label: "South America", query: "?region=South%20America" },
+                  { label: "Oceania", query: "?region=Oceania" }
+                ].map((region) => (
+                  <Button
+                    key={region.label}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push(`/explore${region.query}`)}
+                    className="bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20"
+                  >
+                    {region.label}
+                  </Button>
+                ))}
               </div>
-            </motion.div>
-          )}
+            </div>
 
+            {/* Search Bar with Results */}
+            <div className="relative w-full max-w-md mt-4 px-4" onClick={(e) => e.stopPropagation()}>
+              <div className="absolute inset-y-0 left-0 pl-7 flex items-center pointer-events-none">
+                <Search className="h-5 w-5 text-gray-400" />
+              </div>
+              <Input
+                type="text"
+                placeholder="Search for a country or service..."
+                className="pl-12 pr-4 py-6 w-full bg-black/30 backdrop-blur-md border border-white/10 text-white dark:bg-black/30 dark:border-white/10 dark:text-white rounded-full focus:ring-2 focus:ring-blue-500"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value)
+                  if (e.target.value.length >= 2) {
+                    setShowResults(true)
+                  }
+                }}
+                onFocus={() => {
+                  if (searchResults.length > 0) {
+                    setShowResults(true)
+                  }
+                }}
+              />
+              {showResults && searchResults.length > 0 && (
+                <div className="absolute mt-2 w-full bg-black/80 backdrop-blur-md border border-white/10 rounded-lg shadow-lg z-50 overflow-hidden">
+                  <ul>
+                    {searchResults.map((result, index) => (
+                      <li key={index}>
+                        <Link href={result.url}>
+                          <div className="px-4 py-3 hover:bg-white/10 dark:hover:bg-white/10 flex justify-between items-center">
+                            <div>
+                              <p className="text-white dark:text-white">{result.name}</p>
+                              <p className="text-xs text-gray-400 dark:text-gray-400">{result.type}</p>
+                            </div>
+                            <div className="flex items-center">
+                              <span className="text-yellow-400 mr-1">★</span>
+                              <span className="text-white dark:text-white">{result.rating}</span>
+                            </div>
+                          </div>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
 
-        </motion.div>
+            {/* Enter Civiscore Button */}
+            <Link href="/explore" className="mt-4">
+              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105">
+                Enter Civiscore
+                <ChevronRight className="h-5 w-5 ml-2" />
+              </Button>
+            </Link>
+          </motion.div>
+        </div>
 
-        {/* Stats Section */}
-        <motion.div
+        {/* FOOTER SECTION (Always at Bottom) */}
+        <motion.footer
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.8 }}
-          className="w-full grid grid-cols-2 md:grid-cols-4 gap-4 px-4 mb-4"
+          className="relative z-30 w-full px-4 md:px-6 py-3 flex justify-center items-center backdrop-blur-md bg-black/30 border-t border-white/10"
         >
-          <Card className="bg-black/30 backdrop-blur-md border border-white/10 dark:bg-black/30 dark:border-white/10 p-4">
-            <div className="text-center">
-              <p className="text-gray-400 dark:text-gray-400 text-sm">Total Reviews</p>
-              <StatsCounter end={1245632} className="text-2xl font-bold text-white dark:text-white" />
-            </div>
-          </Card>
-          <Card className="bg-black/30 backdrop-blur-md border border-white/10 dark:bg-black/30 dark:border-white/10 p-4">
-            <div className="text-center">
-              <p className="text-gray-400 dark:text-gray-400 text-sm">Countries</p>
-              <StatsCounter end={COUNTRIES_DATA.length} className="text-2xl font-bold text-white dark:text-white" />
-            </div>
-          </Card>
-          <Card className="bg-black/30 backdrop-blur-md border border-white/10 dark:bg-black/30 dark:border-white/10 p-4">
-            <div className="text-center">
-              <p className="text-gray-400 dark:text-gray-400 text-sm">Services</p>
-              <StatsCounter end={5842} className="text-2xl font-bold text-white dark:text-white" />
-            </div>
-          </Card>
-          <Card className="bg-black/30 backdrop-blur-md border border-white/10 dark:bg-black/30 dark:border-white/10 p-4">
-            <div className="text-center">
-              <p className="text-gray-400 dark:text-gray-400 text-sm">Top Country</p>
-              <p className="text-2xl font-bold text-white dark:text-white">Finland</p>
-              <Badge className="bg-green-500/20 text-green-400 border-green-500/30 dark:bg-green-500/20 dark:text-green-400 dark:border-green-500/30">
-                4.8/5
-              </Badge>
-            </div>
-          </Card>
-        </motion.div>
+          <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-3 px-2">
+            <Card className="bg-black/30 backdrop-blur-md border border-white/10 dark:bg-black/30 dark:border-white/10 p-2">
+              <div className="text-center">
+                <p className="text-gray-400 dark:text-gray-400 text-sm">Total Reviews</p>
+                <StatsCounter end={1245632} className="text-xl font-bold text-white dark:text-white" />
+              </div>
+            </Card>
+            <Card className="bg-black/30 backdrop-blur-md border border-white/10 dark:bg-black/30 dark:border-white/10 p-4">
+              <div className="text-center">
+                <p className="text-gray-400 dark:text-gray-400 text-sm">Countries</p>
+                <StatsCounter end={COUNTRIES_DATA.length} className="text-2xl font-bold text-white dark:text-white" />
+              </div>
+            </Card>
+            <Card className="bg-black/30 backdrop-blur-md border border-white/10 dark:bg-black/30 dark:border-white/10 p-4">
+              <div className="text-center">
+                <p className="text-gray-400 dark:text-gray-400 text-sm">Services</p>
+                <StatsCounter end={5842} className="text-2xl font-bold text-white dark:text-white" />
+              </div>
+            </Card>
+            <Card className="bg-black/30 backdrop-blur-md border border-white/10 dark:bg-black/30 dark:border-white/10 p-4">
+              <div className="text-center">
+                <p className="text-gray-400 dark:text-gray-400 text-sm">Top Country</p>
+                <p className="text-2xl font-bold text-white dark:text-white">Finland</p>
+                <Badge className="bg-green-500/20 text-green-400 border-green-500/30 dark:bg-green-500/20 dark:text-green-400 dark:border-green-500/30">
+                  4.8/5
+                </Badge>
+              </div>
+            </Card>
+          </div>
+        </motion.footer>
 
-
-      </div>
-
-      {/* Fixed bottom navigation bar for mobile */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-black/70 backdrop-blur-md border-t border-white/10 z-50">
-        <div className="flex justify-around py-3">
-          <Link href="/">
-            <Button variant="ghost" size="sm" className="text-white flex flex-col items-center">
-              <Search className="h-5 w-5 mb-1" />
-              <span className="text-xs">Home</span>
-            </Button>
-          </Link>
-          <Link href="/explore">
-            <Button variant="ghost" size="sm" className="text-white flex flex-col items-center">
-              <Search className="h-5 w-5 mb-1" />
-              <span className="text-xs">Explore</span>
-            </Button>
-          </Link>
-          <Link href="/about">
-            <Button variant="ghost" size="sm" className="text-white flex flex-col items-center">
-              <Info className="h-5 w-5 mb-1" />
-              <span className="text-xs">About</span>
-            </Button>
-          </Link>
-          <Link href="/login">
-            <Button variant="ghost" size="sm" className="text-white flex flex-col items-center">
-              <User className="h-5 w-5 mb-1" />
-              <span className="text-xs">Login</span>
-            </Button>
-          </Link>
+        {/* Fixed bottom navigation bar for mobile - if you still need it, adjust its position */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-black/70 backdrop-blur-md border-t border-white/10 z-50">
+          <div className="flex justify-around py-3">
+            <Link href="/">
+              <Button variant="ghost" size="sm" className="text-white flex flex-col items-center">
+                <Search className="h-5 w-5 mb-1" />
+                <span className="text-xs">Home</span>
+              </Button>
+            </Link>
+            <Link href="/explore">
+              <Button variant="ghost" size="sm" className="text-white flex flex-col items-center">
+                <Search className="h-5 w-5 mb-1" />
+                <span className="text-xs">Explore</span>
+              </Button>
+            </Link>
+            <Link href="/about">
+              <Button variant="ghost" size="sm" className="text-white flex flex-col items-center">
+                <Info className="h-5 w-5 mb-1" />
+                <span className="text-xs">About</span>
+              </Button>
+            </Link>
+            <Link href="/login">
+              <Button variant="ghost" size="sm" className="text-white flex flex-col items-center">
+                <User className="h-5 w-5 mb-1" />
+                <span className="text-xs">Login</span>
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
-    </main>
-  )
+    </div>
+  );
 }

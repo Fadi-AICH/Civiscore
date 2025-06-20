@@ -1,0 +1,28 @@
+# Dockerfile.frontend located next to package.json (project root)
+# -------- deps --------
+FROM node:18.20.3-alpine3.19 AS deps
+WORKDIR /app
+RUN apk update && apk upgrade --no-cache
+
+
+
+# Copy dependency manifests (root-level package.json / lock file)
+COPY package*.json ./
+COPY pnpm-lock.yaml ./
+RUN npm config set registry https://registry.npmmirror.com \
+    && npm install --legacy-peer-deps
+
+# -------- build --------
+FROM deps AS builder
+WORKDIR /app
+COPY . .
+RUN npm run build
+
+# -------- runtime --------
+FROM node:18.20.3-alpine3.19 AS runner
+WORKDIR /app
+RUN apk update && apk upgrade --no-cache
+ENV NODE_ENV=production
+COPY --from=builder /app .
+EXPOSE 3000
+CMD ["npm", "run", "start", "--", "-p", "3000"]

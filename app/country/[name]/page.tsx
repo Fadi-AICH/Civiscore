@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { motion } from "framer-motion"
 import { ArrowLeft, Star, Share2, Info, ExternalLink } from "lucide-react"
 import Link from "next/link"
@@ -146,6 +146,11 @@ export default function CountryPage() {
     })
   }
 
+  const bestService = useMemo(() => {
+    if (!country) return { key: "", value: 0 };
+    return Object.entries(country.services as Record<string, number>).reduce((best, [key, value]) => (value > best.value ? { key, value } : best), { key: "", value: 0 });
+  }, [country]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
@@ -257,6 +262,7 @@ export default function CountryPage() {
               transition={{ duration: 0.5, delay: 0.3 }}
               className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-6"
             >
+              
               <Card className="bg-black/30 backdrop-blur-md border border-white/10 md:col-span-2">
                 <CardContent className="p-6">
                   <h2 className="text-xl font-bold mb-4">About {country.name}</h2>
@@ -270,27 +276,7 @@ export default function CountryPage() {
                     <AlertTitle>Public Services Overview</AlertTitle>
                     <AlertDescription>
                       {country.name}'s highest rated public service is{" "}
-                      {Object.entries(country.services)
-                        .reduce((best, [key, value]) => (value > best.value ? { key, value } : best), {
-                          key: "",
-                          value: 0,
-                        })
-                        .key.charAt(0)
-                        .toUpperCase() +
-                        Object.entries(country.services)
-                          .reduce((best, [key, value]) => (value > best.value ? { key, value } : best), {
-                            key: "",
-                            value: 0,
-                          })
-                          .key.slice(1)}{" "}
-                      at{" "}
-                      {Object.entries(country.services)
-                        .reduce((best, [key, value]) => (value > best.value ? { key, value } : best), {
-                          key: "",
-                          value: 0,
-                        })
-                        .value.toFixed(1)}{" "}
-                      out of 5.
+                      {bestService.key ? `${bestService.key.charAt(0).toUpperCase()}${bestService.key.slice(1)} at ${bestService.value.toFixed(1)}` : "N/A"}
                     </AlertDescription>
                   </Alert>
                 </CardContent>
@@ -319,19 +305,7 @@ export default function CountryPage() {
                     <li className="flex justify-between">
                       <span className="text-gray-400">Best Service:</span>
                       <span className="font-medium">
-                        {Object.entries(country.services)
-                          .reduce((best, [key, value]) => (value > best.value ? { key, value } : best), {
-                            key: "",
-                            value: 0,
-                          })
-                          .key.charAt(0)
-                          .toUpperCase() +
-                          Object.entries(country.services)
-                            .reduce((best, [key, value]) => (value > best.value ? { key, value } : best), {
-                              key: "",
-                              value: 0,
-                            })
-                            .key.slice(1)}
+                        {bestService.key ? `${bestService.key.charAt(0).toUpperCase()}${bestService.key.slice(1)}` : "N/A"}
                       </span>
                     </li>
                   </ul>

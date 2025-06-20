@@ -2,10 +2,8 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
-import { ThemeToggle } from "@/components/theme-toggle"
-import AIAssistant from "@/components/ai-assistant"
-import { Toaster } from "@/components/ui/toaster"
+// Import the new ClientProviders component
+import { ClientProviders } from "@/components/client-providers"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -23,20 +21,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} antialiased`}>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={true}>
-          {/* Fixed Theme Toggle Button with improved styling */}
-          <div className="fixed top-4 right-4 z-50">
-            <ThemeToggle className="bg-black/20 backdrop-blur-md dark:bg-white/10 hover:bg-black/30 dark:hover:bg-white/20" />
-          </div>
-
-          {/* AI Assistant */}
-          <AIAssistant />
-
+        {/* Wrap client-side components within ClientProviders */}
+        <ClientProviders>
           {children}
-
-          {/* Toast notifications */}
-          <Toaster />
-        </ThemeProvider>
+        </ClientProviders>
       </body>
     </html>
   )

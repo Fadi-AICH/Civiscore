@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -60,7 +61,7 @@ export default function ExploreClient() {
 
     if (selectedRegion !== "All") {
       const countriesInRegion = COUNTRIES_BY_REGION[selectedRegion]?.map((c) => c.name) || []
-      filtered = filtered.filter((service) => 
+      filtered = filtered.filter((service) =>
         service.country && countriesInRegion.includes(service.country.name)
       )
     }
@@ -82,19 +83,86 @@ export default function ExploreClient() {
         className="sticky top-0 z-50 backdrop-blur-md bg-black/30 border-b border-white/10"
       >
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          {/* LEFT SECTION: Back button and Globe icon */}
           <div className="flex items-center gap-4">
             <Link href="/">
               <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
-            <div className="flex items-center gap-2">
-              <Globe className="h-5 w-5 text-blue-400" />
-              <h1 className="text-xl font-bold">Explore Services</h1>
-            </div>
+            <Globe className="h-5 w-5 text-blue-400" />
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* RIGHT SECTION: Explore Services title, Search, Filters, and other utility buttons */}
+          {/* Added md:flex-row and flex-wrap to better handle layout on different screen sizes */}
+          <div className="flex flex-col md:flex-row flex-wrap items-center justify-end gap-2 md:gap-4">
+            <h1 className="text-xl font-bold whitespace-nowrap hidden md:block">Explore Services</h1> {/* Hide title on small screens to save space */}
+
+            {/* Search Input */}
+            <div className="relative flex-grow-0 min-w-[180px] md:min-w-[250px] w-full md:w-auto"> {/* Adjusted width for responsiveness */}
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-5 w-5 text-gray-400" />
+              </div>
+              <Input
+                type="text"
+                placeholder="Search..."
+                className="pl-10 bg-black/30 backdrop-blur-md border border-white/10 text-white"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            {/* Category Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="bg-black/30 backdrop-blur-md border border-white/10 text-white flex gap-2 w-full md:w-auto"
+                >
+                  <Filter className="h-4 w-4" />
+                  <span className="hidden sm:inline">Category:</span> {selectedCategory}
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-slate-800 border border-white/10 text-white">
+                {categories.map((category) => (
+                  <DropdownMenuItem
+                    key={category}
+                    onClick={() => setSelectedCategory(category)}
+                    className={selectedCategory === category ? "bg-blue-500/20" : ""}
+                  >
+                    {category}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Region Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="bg-black/30 backdrop-blur-md border border-white/10 text-white flex gap-2 w-full md:w-auto"
+                >
+                  <Globe className="h-4 w-4" />
+                  <span className="hidden sm:inline">Region:</span> {selectedRegion}
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-slate-800 border border-white/10 text-white">
+                {regions.map((region) => (
+                  <DropdownMenuItem
+                    key={region}
+                    onClick={() => setSelectedRegion(region)}
+                    className={selectedRegion === region ? "bg-blue-500/20" : ""}
+                  >
+                    {region}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Existing Utility Buttons */}
             <Button
               variant="ghost"
               size="icon"
@@ -126,98 +194,11 @@ export default function ExploreClient() {
         </div>
       </motion.div>
 
+      {/* The original search/filter motion.div and tabs are now removed as their content moved to the header */}
+      {/* <motion.div ... className="flex flex-col md:flex-row gap-4 mb-8"> ... </motion.div> */}
+      {/* <motion.div ... className="hidden md:block mb-8"> ... </motion.demonstration-content> */}
+
       <div className="container mx-auto px-4 py-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="flex flex-col md:flex-row gap-4 mb-8"
-        >
-          <div className="relative flex-grow">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
-            </div>
-            <Input
-              type="text"
-              placeholder="Search services, countries..."
-              className="pl-10 bg-black/30 backdrop-blur-md border border-white/10 text-white"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="bg-black/30 backdrop-blur-md border border-white/10 text-white flex gap-2"
-                >
-                  <Filter className="h-4 w-4" />
-                  Category: {selectedCategory}
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-slate-800 border border-white/10 text-white">
-                {categories.map((category) => (
-                  <DropdownMenuItem
-                    key={category}
-                    onClick={() => setSelectedCategory(category)}
-                    className={selectedCategory === category ? "bg-blue-500/20" : ""}
-                  >
-                    {category}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="bg-black/30 backdrop-blur-md border border-white/10 text-white flex gap-2"
-                >
-                  <Globe className="h-4 w-4" />
-                  Region: {selectedRegion}
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-slate-800 border border-white/10 text-white">
-                {regions.map((region) => (
-                  <DropdownMenuItem
-                    key={region}
-                    onClick={() => setSelectedRegion(region)}
-                    className={selectedRegion === region ? "bg-blue-500/20" : ""}
-                  >
-                    {region}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="hidden md:block mb-8"
-        >
-          <Tabs defaultValue={selectedCategory} onValueChange={setSelectedCategory} value={selectedCategory}>
-            <TabsList className="bg-black/30 backdrop-blur-md border border-white/10 p-1">
-              {categories.map((category) => (
-                <TabsTrigger
-                  key={category}
-                  value={category}
-                  className="data-[state=active]:bg-blue-500 data-[state=active]:text-white"
-                >
-                  {category}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-        </motion.div>
-
         {isLoading ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -314,3 +295,4 @@ export default function ExploreClient() {
     </div>
   )
 }
+
