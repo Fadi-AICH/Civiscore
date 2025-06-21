@@ -14,7 +14,7 @@ class EvaluationVote(Base):
     evaluation_id = Column(UUID(as_uuid=True), ForeignKey("evaluations.id", ondelete="CASCADE"), nullable=False)
     voter_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
     is_helpful = Column(Boolean, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
     evaluation = relationship("Evaluation", back_populates="votes")

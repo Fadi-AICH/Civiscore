@@ -13,30 +13,17 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { COUNTRIES_DATA, COUNTRIES_BY_REGION } from "@/lib/countries-data"
 import { useSearchParams } from "next/navigation"
 import ExploreClient from './explore-client';
+import { servicesApi } from "@/lib/api"
 // Generate services data from countries data
-const generateServicesData = () => {
-  const serviceTypes = ["Healthcare", "Education", "Transportation", "Utilities", "Government"]
-  const services = []
+// const generateServicesData = () => {
+//   const services = []
 
-  for (const country of COUNTRIES_DATA) {
-    for (const serviceType of serviceTypes) {
-      const serviceKey = serviceType.toLowerCase() as keyof typeof country.services
-      if (country.services && country.services[serviceKey]) {
-        services.push({
-          id: `${country.code}-${serviceKey}`,
-          name: `${serviceType} System`,
-          category: serviceType,
-          country: country.name,
-          rating: country.services[serviceKey],
-          reviews: Math.floor(Math.random() * 3000) + 500,
-          image: `/placeholder.svg?height=200&width=400&text=${country.name}+${serviceType}`,
-        })
-      }
-    }
-  }
+//   servicesApi.getServices().then((data) => {
+//     services.push(...data)
+//   })
 
-  return services
-}
+//   return services
+// } 
 
 export default function ExplorePage() {
   const searchParams = useSearchParams()
@@ -49,30 +36,34 @@ export default function ExplorePage() {
   const [filteredServices, setFilteredServices] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  // Initialize services data
   useEffect(() => {
-    const servicesData = generateServicesData()
-    setServices(servicesData)
-    setFilteredServices(servicesData)
-    setIsLoading(false)
+    servicesApi.getServices().then((data) => {
+      setServices(data)
+    })
+  }, [])
 
-    // Check for URL parameters
-    const serviceParam = searchParams.get("service")
-    const regionParam = searchParams.get("region")
-    const countryParam = searchParams.get("country")
+  // Initialize services data
+  // useEffect(() => {    
+  //   setFilteredServices(services)
+  //   setIsLoading(false)
 
-    if (serviceParam) {
-      setSelectedCategory(serviceParam.charAt(0).toUpperCase() + serviceParam.slice(1))
-    }
+  //   // Check for URL parameters
+  //   const serviceParam = searchParams.get("service")
+  //   const regionParam = searchParams.get("region")
+  //   const countryParam = searchParams.get("country")
 
-    if (regionParam) {
-      setSelectedRegion(regionParam)
-    }
+  //   if (serviceParam) {
+  //     setSelectedCategory(serviceParam.charAt(0).toUpperCase() + serviceParam.slice(1))
+  //   }
 
-    if (countryParam) {
-      setSearchQuery(countryParam)
-    }
-  }, [searchParams])
+  //   if (regionParam) {
+  //     setSelectedRegion(regionParam)
+  //   }
+
+  //   if (countryParam) {
+  //     setSearchQuery(countryParam)
+  //   }
+  // }, [searchParams])
 
   // Filter services based on search, category, and region
   useEffect(() => {
@@ -105,6 +96,7 @@ export default function ExplorePage() {
     // Sort by rating (highest first)
     filtered.sort((a, b) => b.rating - a.rating)
 
+    // console.log(filtered)
     setFilteredServices(filtered)
   }, [searchQuery, selectedCategory, selectedRegion, services])
 
